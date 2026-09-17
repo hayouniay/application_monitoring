@@ -1,0 +1,280 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+
+        // ── BUILD ─────────────────────────────────────────────────────────────
+
+        {
+            "label": "APP TOP Monitoring - Build",
+            "type": "shell",
+            "command": "make",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "icon": {
+                "id": "rocket",
+                "color": "terminal.ansiGreen"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Build Debug",
+            "type": "shell",
+            "command": "make debug",
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "icon": {
+                "id": "bug",
+                "color": "terminal.ansiMagenta"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Build Release",
+            "type": "shell",
+            "command": "make release",
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "icon": {
+                "id": "rocket",
+                "color": "terminal.ansiGreen"
+            }
+        },
+
+        // ── CLEAN ─────────────────────────────────────────────────────────────
+
+        {
+            "label": "APP TOP Monitoring - Clean",
+            "type": "shell",
+            "command": "make clean",
+            "problemMatcher": [],
+            "icon": {
+                "id": "trash",
+                "color": "terminal.ansiRed"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Clean and Build",
+            "type": "shell",
+            "command": "make",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "APP TOP Monitoring - Clean"
+            ],
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "icon": {
+                "id": "refresh",
+                "color": "terminal.ansiGreen"
+            }
+        },
+
+        // ── CMAKE ─────────────────────────────────────────────────────────────
+
+        {
+            "label": "APP TOP Monitoring - CMake Configure",
+            "type": "shell",
+            "command": "cmake -S . -B build",
+            "problemMatcher": [],
+            "icon": {
+                "id": "gear",
+                "color": "terminal.ansiBlue"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - CMake Build",
+            "type": "shell",
+            "command": "cmake --build build --target app_top_monitoring",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "icon": {
+                "id": "tools",
+                "color": "terminal.ansiGreen"
+            }
+        },
+
+        // ── RUN ───────────────────────────────────────────────────────────────
+
+        {
+            "label": "APP TOP Monitoring - Run",
+            "type": "shell",
+            "command": "./build/app_top_monitoring",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "pulse",
+                "color": "terminal.ansiCyan"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Run One Shot",
+            "type": "shell",
+            "command": "./build/app_top_monitoring --once",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "icon": {
+                "id": "debug-stop",
+                "color": "terminal.ansiYellow"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Run Long Args",
+            "type": "shell",
+            "command": "./build/app_top_monitoring --long-args",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "list-tree",
+                "color": "terminal.ansiCyan"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Run CPU Sort",
+            "type": "shell",
+            "command": "./build/app_top_monitoring --sort cpu",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "graph",
+                "color": "terminal.ansiGreen"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Run Memory Sort",
+            "type": "shell",
+            "command": "./build/app_top_monitoring --sort mem",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "graph",
+                "color": "terminal.ansiYellow"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Run Bash",
+            "type": "shell",
+            "command": "./build/app_top_monitoring bash",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "terminal",
+                "color": "terminal.ansiCyan"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Run SSH",
+            "type": "shell",
+            "command": "./build/app_top_monitoring ssh",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "radio-tower",
+                "color": "terminal.ansiCyan"
+            }
+        },
+
+        // ── INSTALL ───────────────────────────────────────────────────────────
+
+        {
+            "label": "APP TOP Monitoring - Install",
+            "type": "shell",
+            "command": "make install",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "icon": {
+                "id": "cloud-upload",
+                "color": "terminal.ansiCyan"
+            }
+        },
+
+        // ── FORMAT ────────────────────────────────────────────────────────────
+
+        {
+            "label": "APP TOP Monitoring - Format",
+            "type": "shell",
+            "command": "clang-format -i src/*.c inc/*.h",
+            "problemMatcher": [],
+            "icon": {
+                "id": "symbol-color",
+                "color": "terminal.ansiGreen"
+            }
+        }
+    ]
+}
