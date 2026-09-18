@@ -40,6 +40,7 @@ private:
 
   void updateStats();
   void updateDetails();
+  void updateThemeButtonLabel();
 
   NeoQtProcessModel *m_processModel;
   NeoQtMonitorController *m_monitorController;
@@ -67,6 +68,7 @@ private:
   QPushButton *m_refreshButton;
   QPushButton *m_pauseButton;
   QPushButton *m_settingsButton;
+  QPushButton *m_themeButton;
 
   bool m_monitoring;
 };

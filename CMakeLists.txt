@@ -84,12 +84,14 @@ qt_add_executable(
     src/qt/qt_process_model.cpp
     src/qt/qt_monitor_controller.cpp
     src/qt/qt_settings_dialog.cpp
+    src/qt/qt_theme.cpp
     
     inc/qt/qt_application.h
     inc/qt/qt_main_window.h
     inc/qt/qt_process_model.h
     inc/qt/qt_monitor_controller.h
     inc/qt/qt_settings_dialog.h
+    inc/qt/qt_theme.h
 
     ui/qt/resources/monitoring.qrc
 )

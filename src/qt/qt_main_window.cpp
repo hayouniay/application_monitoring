@@ -1,8 +1,10 @@
 #include "qt/qt_main_window.h"
 
+#include "qt/qt_application.h"
 #include "qt/qt_monitor_controller.h"
 #include "qt/qt_process_model.h"
 #include "qt/qt_settings_dialog.h"
+#include "qt/qt_theme.h"
 
 #include <QAbstractItemView>
 #include <QCheckBox>
@@ -14,6 +16,7 @@
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QSizePolicy>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QStatusBar>
@@ -33,7 +36,7 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
       m_sortCombo(nullptr), m_stateCombo(nullptr), m_treeCheck(nullptr),
       m_refreshInterval(nullptr), m_processView(nullptr), m_detailText(nullptr),
       m_refreshButton(nullptr), m_pauseButton(nullptr),
-      m_settingsButton(nullptr), m_monitoring(true) {
+      m_settingsButton(nullptr), m_themeButton(nullptr), m_monitoring(true) {
   setupUi();
 
   connect(m_refreshTimer, &QTimer::timeout, this, &NeoQtMainWindow::refresh);
@@ -99,11 +102,13 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
 
   updateStats();
 
+  m_processView->resizeColumnsToContents();
+
   m_refreshTimer->start();
 }
 
 void NeoQtMainWindow::setupUi() {
-  setWindowTitle(QStringLiteral("APP TOP Monitoring"));
+  setWindowTitle(QStringLiteral("NEO Monitoring Services"));
 
   resize(1400, 850);
 
@@ -115,9 +120,9 @@ void NeoQtMainWindow::setupUi() {
 
   auto *mainLayout = new QVBoxLayout(m_centralWidget);
 
-  mainLayout->setContentsMargins(10, 10, 10, 10);
+  mainLayout->setContentsMargins(14, 14, 14, 14);
 
-  mainLayout->setSpacing(8);
+  mainLayout->setSpacing(10);
 
   setupStats();
 
@@ -165,9 +170,38 @@ void NeoQtMainWindow::setupToolbar() {
 
   m_settingsButton = new QPushButton(QStringLiteral("Settings"), this);
 
+  m_themeButton = new QPushButton(this);
+
+  m_themeButton->setObjectName(QStringLiteral("themeToggleButton"));
+
+  m_themeButton->setCursor(Qt::PointingHandCursor);
+
   toolbar->addWidget(m_refreshButton);
   toolbar->addWidget(m_pauseButton);
   toolbar->addWidget(m_settingsButton);
+
+  /*
+   * Push the theme toggle to the far right of the toolbar.
+   */
+  auto *spacer = new QWidget(this);
+
+  spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+
+  toolbar->addWidget(spacer);
+  toolbar->addWidget(m_themeButton);
+
+  updateThemeButtonLabel();
+
+  connect(m_themeButton, &QPushButton::clicked, this, [this]() {
+    if (auto *application = qobject_cast<NeoQtApplication *>(qApp)) {
+      application->toggleTheme();
+    }
+  });
+
+  if (auto *application = qobject_cast<NeoQtApplication *>(qApp)) {
+    connect(application, &NeoQtApplication::themeChanged, this,
+            [this](NeoTheme) { updateThemeButtonLabel(); });
+  }
 }
 
 void NeoQtMainWindow::setupStats() {
@@ -273,6 +307,8 @@ void NeoQtMainWindow::setupProcessView() {
 
   m_processView->setAlternatingRowColors(true);
 
+  m_processView->setShowGrid(false);
+
   m_processView->verticalHeader()->setVisible(false);
 
   m_processView->horizontalHeader()->setStretchLastSection(true);
@@ -337,6 +373,8 @@ void NeoQtMainWindow::toggleMonitoring() {
 void NeoQtMainWindow::showSettings() {
   NeoQtSettingsDialog dialog(this);
 
+  dialog.setConfig(m_monitorController->config());
+
   dialog.exec();
 }
 
@@ -385,4 +423,16 @@ void NeoQtMainWindow::updateDetails() {
           .arg(process->rss_mb, 0, 'f', 1)
           .arg(process->vsz_mb, 0, 'f', 1)
           .arg(static_cast<qulonglong>(process->threads)));
+}
+
+void NeoQtMainWindow::updateThemeButtonLabel() {
+  if (m_themeButton == nullptr)
+    return;
+
+  if (auto *application = qobject_cast<NeoQtApplication *>(qApp)) {
+    const bool isDark = application->currentTheme() == NeoTheme::Dark;
+
+    m_themeButton->setText(isDark ? QStringLiteral("\u2600  Light Mode")
+                                  : QStringLiteral("\U0001F319  Dark Mode"));
+  }
 }
