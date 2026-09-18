@@ -1,24 +1,34 @@
 BUILD_DIR := build
 
-.PHONY: all build clean debug release install
+CLI_TARGET := app_top_monitoring
+QT_TARGET := app_top_monitoring_qt
+
+.PHONY: all build cli qt debug release install clean
 
 all: build
 
 build:
 	cmake -S . -B $(BUILD_DIR)
-	cmake --build $(BUILD_DIR) --target app_top_monitoring
+	cmake --build $(BUILD_DIR)
+
+cli:
+	cmake -S . -B $(BUILD_DIR)
+	cmake --build $(BUILD_DIR) --target $(CLI_TARGET)
+
+qt:
+	cmake -S . -B $(BUILD_DIR)
+	cmake --build $(BUILD_DIR) --target $(QT_TARGET)
 
 release:
 	cmake -S . -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=Release
-	cmake --build $(BUILD_DIR) --target app_top_monitoring
+	cmake --build $(BUILD_DIR)
 
 debug:
 	cmake -S . -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=Debug
-	cmake --build $(BUILD_DIR) --target app_top_monitoring
+	cmake --build $(BUILD_DIR)
 
-install: build
+install:
 	cmake --install $(BUILD_DIR)
 
 clean:
 	cmake --build $(BUILD_DIR) --target clean
-

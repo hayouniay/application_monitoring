@@ -1,5 +1,5 @@
-#ifndef NEO_MONITORING_UI_H
-#define NEO_MONITORING_UI_H
+#ifndef MONITORING_UI_H
+#define MONITORING_UI_H
 
 #include "monitoring_services.h"
 
@@ -65,4 +65,4 @@ int ui_is_interactive(void);
  */
 int ui_handle_key(NeoConfig *config, int key, int *force_refresh);
 
-#endif /* NEO_MONITORING_UI_H */
+#endif /* MONITORING_UI_H */

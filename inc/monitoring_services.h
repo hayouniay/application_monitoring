@@ -1,7 +1,7 @@
-#ifndef NEO_MONITORING_SERVICES_H
-#define NEO_MONITORING_SERVICES_H
+#ifndef MONITORING_SERVICES_H
+#define MONITORING_SERVICES_H
 
-#define _GNU_SOURCE
+//#define _GNU_SOURCE
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -13,29 +13,29 @@
 /* Version / global limits                                                   */
 /* ------------------------------------------------------------------------- */
 
-#define NEO_VERSION "1.0.0"
+#define VERSION "1.0.0"
 
-#define NEO_DEFAULT_INTERVAL 2.0
-#define NEO_MIN_INTERVAL 0.1
-#define NEO_MAX_INTERVAL 60.0
+#define DEFAULT_INTERVAL 2.0
+#define MIN_INTERVAL 0.1
+#define MAX_INTERVAL 60.0
 
-#define NEO_MAX_PATTERNS 128
-#define NEO_MAX_CMDLINE 8192
-#define NEO_MAX_USER 64
-#define NEO_MAX_STATE_FILTER 16
-#define NEO_INITIAL_CAPACITY 128
+#define MAX_PATTERNS 128
+#define MAX_CMDLINE 8192
+#define MAX_USER 64
+#define MAX_STATE_FILTER 16
+#define INITIAL_CAPACITY 128
 
 /* ------------------------------------------------------------------------- */
 /* Sorting                                                                   */
 /* ------------------------------------------------------------------------- */
 
 typedef enum {
-  NEO_SORT_CPU = 0,
-  NEO_SORT_MEM,
-  NEO_SORT_PID,
-  NEO_SORT_RSS,
-  NEO_SORT_IO_READ,
-  NEO_SORT_IO_WRITE
+  SORT_CPU = 0,
+  SORT_MEM,
+  SORT_PID,
+  SORT_RSS,
+  SORT_IO_READ,
+  SORT_IO_WRITE
 } NeoSortMode;
 
 /* ------------------------------------------------------------------------- */
@@ -47,7 +47,7 @@ typedef struct {
   pid_t ppid;
   uid_t uid;
 
-  char user[NEO_MAX_USER];
+  char user[MAX_USER];
 
   char state;
   unsigned long threads;
@@ -83,7 +83,7 @@ typedef struct {
 
   /* Names */
   char comm[256];
-  char cmdline[NEO_MAX_CMDLINE];
+  char cmdline[MAX_CMDLINE];
 
 } NeoProcess;
 
@@ -155,7 +155,7 @@ typedef struct {
   uid_t filter_uid;
   bool filter_uid_enabled;
 
-  char filter_user[NEO_MAX_USER];
+  char filter_user[MAX_USER];
   bool filter_user_enabled;
 
   /* PID filters */
@@ -167,7 +167,7 @@ typedef struct {
   size_t ppid_count;
 
   /* Process state filter */
-  char states[NEO_MAX_STATE_FILTER];
+  char states[MAX_STATE_FILTER];
   size_t state_count;
 
   /* Sorting */
@@ -239,8 +239,8 @@ int read_system_info(NeoSystemInfo *info);
 /* ------------------------------------------------------------------------- */
 
 int scan_processes(const NeoConfig *config, const NeoSystemInfo *system,
-                       NeoProcessList *list, NeoPreviousList *previous,
-                       double interval);
+                   NeoProcessList *list, NeoPreviousList *previous,
+                   double interval);
 
 /* ------------------------------------------------------------------------- */
 /* Filtering                                                                 */
@@ -253,7 +253,7 @@ int process_matches(const NeoConfig *config, const NeoProcess *process);
 /* ------------------------------------------------------------------------- */
 
 void update_metrics(NeoProcess *process, const NeoPreviousSample *previous,
-                        const NeoSystemInfo *system, double interval);
+                    const NeoSystemInfo *system, double interval);
 
 /* ------------------------------------------------------------------------- */
 /* Sorting                                                                   */
@@ -286,11 +286,11 @@ int ui_is_interactive(void);
 /* ------------------------------------------------------------------------- */
 
 void output_table(const NeoConfig *config, const NeoSystemInfo *system,
-                      const NeoProcessList *list);
+                  const NeoProcessList *list);
 
 void output_csv(const NeoConfig *config, const NeoProcessList *list);
 
 void output_json(const NeoConfig *config, const NeoSystemInfo *system,
-                     const NeoProcessList *list);
+                 const NeoProcessList *list);
 
-#endif /* NEO_MONITORING_SERVICES_H */
+#endif /* MONITORING_SERVICES_H */

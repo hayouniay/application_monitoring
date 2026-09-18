@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
      * Scan /proc and calculate process metrics.
      */
     if (scan_processes(&config, &system_info, &process_list, &previous_list,
-                           interval) != 0) {
+                       interval) != 0) {
 
       fprintf(stderr, "monitoring_services: "
                       "failed to scan /proc\n");

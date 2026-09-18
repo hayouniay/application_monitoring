@@ -40,8 +40,7 @@ static int append_pid(pid_t **array, size_t *count, pid_t pid) {
   return 0;
 }
 
-static int append_pattern(char ***array, size_t *count,
-                              const char *pattern) {
+static int append_pattern(char ***array, size_t *count, const char *pattern) {
   char **tmp;
   char *copy;
 
@@ -93,8 +92,7 @@ static int process_list_reserve(NeoProcessList *list, size_t capacity) {
   return 0;
 }
 
-static int process_list_add(NeoProcessList *list,
-                                const NeoProcess *process) {
+static int process_list_add(NeoProcessList *list, const NeoProcess *process) {
   size_t new_capacity;
 
   if (list == NULL || process == NULL) {
@@ -104,7 +102,7 @@ static int process_list_add(NeoProcessList *list,
   if (list->count >= list->capacity) {
 
     if (list->capacity == 0) {
-      new_capacity = NEO_INITIAL_CAPACITY;
+      new_capacity = INITIAL_CAPACITY;
     } else {
       new_capacity = list->capacity * 2;
     }
@@ -252,7 +250,7 @@ void config_init(NeoConfig *config) {
 
   memset(config, 0, sizeof(*config));
 
-  config->interval = NEO_DEFAULT_INTERVAL;
+  config->interval = DEFAULT_INTERVAL;
 
   config->cpu_threshold = 0.0;
   config->ram_threshold_mb = 0.0;
@@ -281,7 +279,7 @@ void config_init(NeoConfig *config) {
   config->filter_user[0] = '\0';
   config->filter_user_enabled = false;
 
-  config->sort_mode = NEO_SORT_CPU;
+  config->sort_mode = SORT_CPU;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -389,8 +387,7 @@ static int parse_states(NeoConfig *config, const char *value) {
     return -1;
   }
 
-  for (i = 0; value[i] != '\0' && config->state_count < NEO_MAX_STATE_FILTER;
-       ++i) {
+  for (i = 0; value[i] != '\0' && config->state_count < MAX_STATE_FILTER; ++i) {
 
     char state = value[i];
 
@@ -598,8 +595,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
     case 'i':
       config->interval = strtod(optarg, NULL);
 
-      if (config->interval < NEO_MIN_INTERVAL ||
-          config->interval > NEO_MAX_INTERVAL) {
+      if (config->interval < MIN_INTERVAL || config->interval > MAX_INTERVAL) {
 
         fprintf(stderr, "Invalid interval: %s\n", optarg);
 
@@ -612,7 +608,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       break;
 
     case 'x':
-      if (config->exclude_count >= NEO_MAX_PATTERNS) {
+      if (config->exclude_count >= MAX_PATTERNS) {
 
         fprintf(stderr, "Too many exclude patterns.\n");
 
@@ -620,7 +616,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       }
 
       if (append_pattern(&config->exclude_patterns, &config->exclude_count,
-                             optarg) != 0) {
+                         optarg) != 0) {
         return -1;
       }
       break;
@@ -635,8 +631,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       break;
 
     case 'P':
-      if (parse_pid_list(&config->ppids, &config->ppid_count, optarg) !=
-          0) {
+      if (parse_pid_list(&config->ppids, &config->ppid_count, optarg) != 0) {
 
         fprintf(stderr, "Invalid PPID list: %s\n", optarg);
 
@@ -676,11 +671,11 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       break;
 
     case 'c':
-      config->sort_mode = NEO_SORT_CPU;
+      config->sort_mode = SORT_CPU;
       break;
 
     case 'm':
-      config->sort_mode = NEO_SORT_MEM;
+      config->sort_mode = SORT_MEM;
       break;
 
     case 1000:
@@ -718,23 +713,23 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
     case 1008:
 
       if (strcasecmp(optarg, "cpu") == 0) {
-        config->sort_mode = NEO_SORT_CPU;
+        config->sort_mode = SORT_CPU;
 
       } else if (strcasecmp(optarg, "mem") == 0 ||
                  strcasecmp(optarg, "memory") == 0) {
-        config->sort_mode = NEO_SORT_MEM;
+        config->sort_mode = SORT_MEM;
 
       } else if (strcasecmp(optarg, "pid") == 0) {
-        config->sort_mode = NEO_SORT_PID;
+        config->sort_mode = SORT_PID;
 
       } else if (strcasecmp(optarg, "rss") == 0) {
-        config->sort_mode = NEO_SORT_RSS;
+        config->sort_mode = SORT_RSS;
 
       } else if (strcasecmp(optarg, "read") == 0) {
-        config->sort_mode = NEO_SORT_IO_READ;
+        config->sort_mode = SORT_IO_READ;
 
       } else if (strcasecmp(optarg, "write") == 0) {
-        config->sort_mode = NEO_SORT_IO_WRITE;
+        config->sort_mode = SORT_IO_WRITE;
 
       } else {
         fprintf(stderr, "Unknown sort mode: %s\n", optarg);
@@ -763,7 +758,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       exit(EXIT_SUCCESS);
 
     case 'V':
-      printf("monitoring_services %s\n", NEO_VERSION);
+      printf("monitoring_services %s\n", VERSION);
       exit(EXIT_SUCCESS);
 
     case '?':
@@ -780,7 +775,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
    */
   while (optind < argc) {
 
-    if (config->pattern_count >= NEO_MAX_PATTERNS) {
+    if (config->pattern_count >= MAX_PATTERNS) {
 
       fprintf(stderr, "Too many patterns.\n");
 
@@ -788,7 +783,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
     }
 
     if (append_pattern(&config->patterns, &config->pattern_count,
-                           argv[optind]) != 0) {
+                       argv[optind]) != 0) {
 
       return -1;
     }
@@ -889,8 +884,8 @@ int read_system_info(NeoSystemInfo *info) {
 /* ------------------------------------------------------------------------- */
 
 int scan_processes(const NeoConfig *config, const NeoSystemInfo *system,
-                       NeoProcessList *list, NeoPreviousList *previous,
-                       double interval) {
+                   NeoProcessList *list, NeoPreviousList *previous,
+                   double interval) {
   DIR *dir;
   struct dirent *entry;
 
@@ -998,10 +993,10 @@ int scan_processes(const NeoConfig *config, const NeoSystemInfo *system,
 /* ------------------------------------------------------------------------- */
 
 static int compare_processes(const NeoProcess *a, const NeoProcess *b,
-                                 NeoSortMode mode) {
+                             NeoSortMode mode) {
   switch (mode) {
 
-  case NEO_SORT_CPU:
+  case SORT_CPU:
     if (a->cpu_percent < b->cpu_percent) {
       return 1;
     }
@@ -1012,7 +1007,7 @@ static int compare_processes(const NeoProcess *a, const NeoProcess *b,
 
     break;
 
-  case NEO_SORT_MEM:
+  case SORT_MEM:
     if (a->mem_percent < b->mem_percent) {
       return 1;
     }
@@ -1023,7 +1018,7 @@ static int compare_processes(const NeoProcess *a, const NeoProcess *b,
 
     break;
 
-  case NEO_SORT_PID:
+  case SORT_PID:
     if (a->pid > b->pid) {
       return 1;
     }
@@ -1034,7 +1029,7 @@ static int compare_processes(const NeoProcess *a, const NeoProcess *b,
 
     break;
 
-  case NEO_SORT_RSS:
+  case SORT_RSS:
     if (a->rss_kb < b->rss_kb) {
       return 1;
     }
@@ -1045,7 +1040,7 @@ static int compare_processes(const NeoProcess *a, const NeoProcess *b,
 
     break;
 
-  case NEO_SORT_IO_READ:
+  case SORT_IO_READ:
     if (a->io_read_mb_s < b->io_read_mb_s) {
       return 1;
     }
@@ -1056,7 +1051,7 @@ static int compare_processes(const NeoProcess *a, const NeoProcess *b,
 
     break;
 
-  case NEO_SORT_IO_WRITE:
+  case SORT_IO_WRITE:
     if (a->io_write_mb_s < b->io_write_mb_s) {
       return 1;
     }

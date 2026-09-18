@@ -52,8 +52,7 @@ int filter_contains_ci(const char *text, const char *pattern) {
 /* Include patterns                                                          */
 /* ------------------------------------------------------------------------- */
 
-int filter_match_patterns(const NeoConfig *config,
-                              const NeoProcess *process) {
+int filter_match_patterns(const NeoConfig *config, const NeoProcess *process) {
   size_t i;
 
   if (config == NULL || process == NULL) {
@@ -95,8 +94,7 @@ int filter_match_patterns(const NeoConfig *config,
 /* Exclusion patterns                                                        */
 /* ------------------------------------------------------------------------- */
 
-int filter_match_excludes(const NeoConfig *config,
-                              const NeoProcess *process) {
+int filter_match_excludes(const NeoConfig *config, const NeoProcess *process) {
   size_t i;
 
   if (config == NULL || process == NULL) {

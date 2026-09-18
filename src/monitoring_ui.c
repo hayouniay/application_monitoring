@@ -226,7 +226,7 @@ int ui_handle_key(NeoConfig *config, int key, int *force_refresh) {
 
   case 'c':
   case 'C':
-    config->sort_mode = NEO_SORT_CPU;
+    config->sort_mode = SORT_CPU;
 
     if (force_refresh != NULL) {
       *force_refresh = 1;
@@ -240,7 +240,7 @@ int ui_handle_key(NeoConfig *config, int key, int *force_refresh) {
 
   case 'm':
   case 'M':
-    config->sort_mode = NEO_SORT_MEM;
+    config->sort_mode = SORT_MEM;
 
     if (force_refresh != NULL) {
       *force_refresh = 1;
@@ -254,7 +254,7 @@ int ui_handle_key(NeoConfig *config, int key, int *force_refresh) {
 
   case 'p':
   case 'P':
-    config->sort_mode = NEO_SORT_PID;
+    config->sort_mode = SORT_PID;
 
     if (force_refresh != NULL) {
       *force_refresh = 1;
@@ -269,8 +269,8 @@ int ui_handle_key(NeoConfig *config, int key, int *force_refresh) {
   case '+':
     config->interval *= 2.0;
 
-    if (config->interval > NEO_MAX_INTERVAL) {
-      config->interval = NEO_MAX_INTERVAL;
+    if (config->interval > MAX_INTERVAL) {
+      config->interval = MAX_INTERVAL;
     }
 
     if (force_refresh != NULL) {
@@ -286,8 +286,8 @@ int ui_handle_key(NeoConfig *config, int key, int *force_refresh) {
   case '-':
     config->interval /= 2.0;
 
-    if (config->interval < NEO_MIN_INTERVAL) {
-      config->interval = NEO_MIN_INTERVAL;
+    if (config->interval < MIN_INTERVAL) {
+      config->interval = MIN_INTERVAL;
     }
 
     if (force_refresh != NULL) {

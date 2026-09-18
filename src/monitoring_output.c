@@ -120,8 +120,7 @@ static void format_elapsed(double seconds, char *buffer, size_t size) {
   }
 }
 
-static void format_start_time(time_t start_time, char *buffer,
-                                  size_t size) {
+static void format_start_time(time_t start_time, char *buffer, size_t size) {
   struct tm tm_value;
 
   if (buffer == NULL || size == 0) {
@@ -145,8 +144,7 @@ static void format_start_time(time_t start_time, char *buffer,
 /* Process table row                                                         */
 /* ------------------------------------------------------------------------- */
 
-void output_process_row(const NeoConfig *config,
-                            const NeoProcess *process) {
+void output_process_row(const NeoConfig *config, const NeoProcess *process) {
   char elapsed[32];
   char start_time[32];
 
@@ -165,8 +163,8 @@ void output_process_row(const NeoConfig *config,
   printf("%-7ld %-7ld %-10.10s %-5s "
          "%6.2f %6.2f %7.1fM %7.1fM",
          (long)process->pid, (long)process->ppid, process->user,
-         state_name(process->state), process->cpu_percent,
-         process->mem_percent, process->rss_mb, process->vsz_mb);
+         state_name(process->state), process->cpu_percent, process->mem_percent,
+         process->rss_mb, process->vsz_mb);
 
   if (config->show_swap) {
     printf(" %7.1fM", process->swap_mb);
@@ -196,7 +194,7 @@ void output_process_row(const NeoConfig *config,
 /* ------------------------------------------------------------------------- */
 
 void output_table(const NeoConfig *config, const NeoSystemInfo *system,
-                      const NeoProcessList *list) {
+                  const NeoProcessList *list) {
   size_t i;
   size_t count;
 
@@ -207,7 +205,7 @@ void output_table(const NeoConfig *config, const NeoSystemInfo *system,
   /*
    * Header.
    */
-  printf("monitoring_services %s\n", NEO_VERSION);
+  printf("monitoring_services %s\n", VERSION);
 
   printf("Processes: %zu | CPUs: %u | "
          "Memory: %.1f MB | Refresh: %.2fs\n",
@@ -217,27 +215,27 @@ void output_table(const NeoConfig *config, const NeoSystemInfo *system,
   printf("Sort: ");
 
   switch (config->sort_mode) {
-  case NEO_SORT_CPU:
+  case SORT_CPU:
     printf("CPU");
     break;
 
-  case NEO_SORT_MEM:
+  case SORT_MEM:
     printf("MEMORY");
     break;
 
-  case NEO_SORT_PID:
+  case SORT_PID:
     printf("PID");
     break;
 
-  case NEO_SORT_RSS:
+  case SORT_RSS:
     printf("RSS");
     break;
 
-  case NEO_SORT_IO_READ:
+  case SORT_IO_READ:
     printf("IO-READ");
     break;
 
-  case NEO_SORT_IO_WRITE:
+  case SORT_IO_WRITE:
     printf("IO-WRITE");
     break;
 
@@ -420,7 +418,7 @@ void output_csv(const NeoConfig *config, const NeoProcessList *list) {
 /* ------------------------------------------------------------------------- */
 
 void output_json(const NeoConfig *config, const NeoSystemInfo *system,
-                     const NeoProcessList *list) {
+                 const NeoProcessList *list) {
   size_t i;
   size_t count;
 
@@ -437,7 +435,7 @@ void output_json(const NeoConfig *config, const NeoSystemInfo *system,
   printf("{\n");
 
   printf("  \"version\": ");
-  output_json_string(NEO_VERSION);
+  output_json_string(VERSION);
   printf(",\n");
 
   printf("  \"cpu_count\": %u,\n", system->cpu_count);

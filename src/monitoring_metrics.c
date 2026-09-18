@@ -46,10 +46,10 @@ static unsigned long long read_total_cpu(void) {
 /* ------------------------------------------------------------------------- */
 
 double metrics_cpu_percent(unsigned long long current_total,
-                               unsigned long long previous_total,
-                               unsigned long long current_system_total,
-                               unsigned long long previous_system_total,
-                               unsigned int cpu_count) {
+                           unsigned long long previous_total,
+                           unsigned long long current_system_total,
+                           unsigned long long previous_system_total,
+                           unsigned int cpu_count) {
   unsigned long long process_delta;
   unsigned long long system_delta;
 
@@ -89,7 +89,7 @@ double metrics_cpu_percent(unsigned long long current_total,
 /* ------------------------------------------------------------------------- */
 
 double metrics_memory_percent(unsigned long long rss_kb,
-                                  unsigned long long total_memory_kb) {
+                              unsigned long long total_memory_kb) {
   if (total_memory_kb == 0) {
     return 0.0;
   }
@@ -102,7 +102,7 @@ double metrics_memory_percent(unsigned long long rss_kb,
 /* ------------------------------------------------------------------------- */
 
 double metrics_io_rate(unsigned long long current_bytes,
-                           unsigned long long previous_bytes, double interval) {
+                       unsigned long long previous_bytes, double interval) {
   unsigned long long delta;
 
   if (interval <= 0.0) {
@@ -122,9 +122,7 @@ double metrics_io_rate(unsigned long long current_bytes,
 /* Unit conversion                                                           */
 /* ------------------------------------------------------------------------- */
 
-double metrics_kb_to_mb(unsigned long long kb) {
-  return (double)kb / 1024.0;
-}
+double metrics_kb_to_mb(unsigned long long kb) { return (double)kb / 1024.0; }
 
 /* ------------------------------------------------------------------------- */
 /* Process elapsed time                                                      */
@@ -163,7 +161,7 @@ unsigned long long metrics_total_cpu_time(const NeoProcess *process) {
 /* ------------------------------------------------------------------------- */
 
 void update_metrics(NeoProcess *process, const NeoPreviousSample *previous,
-                        const NeoSystemInfo *system, double interval) {
+                    const NeoSystemInfo *system, double interval) {
   unsigned long long current_system_cpu;
 
   if (process == NULL) {
@@ -191,11 +189,11 @@ void update_metrics(NeoProcess *process, const NeoPreviousSample *previous,
    */
   if (previous != NULL) {
 
-    process->io_read_mb_s = metrics_io_rate(process->read_bytes,
-                                                previous->read_bytes, interval);
+    process->io_read_mb_s =
+        metrics_io_rate(process->read_bytes, previous->read_bytes, interval);
 
-    process->io_write_mb_s = metrics_io_rate(
-        process->write_bytes, previous->write_bytes, interval);
+    process->io_write_mb_s =
+        metrics_io_rate(process->write_bytes, previous->write_bytes, interval);
 
   } else {
 

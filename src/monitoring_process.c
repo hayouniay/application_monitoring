@@ -72,7 +72,7 @@ int parse_pid_path(const char *name, pid_t *pid) {
 
 int process_read_cmdline(pid_t pid, char *buffer, size_t size) {
   char path[64];
-  char raw[NEO_MAX_CMDLINE];
+  char raw[MAX_CMDLINE];
   ssize_t length;
   size_t i;
   size_t out = 0;
@@ -129,7 +129,7 @@ int process_read_cmdline(pid_t pid, char *buffer, size_t size) {
 /* ------------------------------------------------------------------------- */
 
 int process_read_io(pid_t pid, unsigned long long *read_bytes,
-                        unsigned long long *write_bytes) {
+                    unsigned long long *write_bytes) {
   char path[64];
   FILE *fp;
   char line[256];
@@ -175,9 +175,8 @@ int process_read_io(pid_t pid, unsigned long long *read_bytes,
 /* ------------------------------------------------------------------------- */
 
 int process_read_status(pid_t pid, uid_t *uid, char *user, size_t user_size,
-                            unsigned long long *rss_kb,
-                            unsigned long long *swap_kb,
-                            unsigned long *threads) {
+                        unsigned long long *rss_kb, unsigned long long *swap_kb,
+                        unsigned long *threads) {
   char path[64];
   FILE *fp;
   char line[512];
@@ -521,8 +520,8 @@ int process_collect(pid_t pid, NeoProcess *process) {
    * status contains UID, username, RSS, swap and thread count.
    */
   if (process_read_status(pid, &process->uid, process->user,
-                              sizeof(process->user), &process->rss_kb,
-                              &process->swap_kb, &process->threads) != 0) {
+                          sizeof(process->user), &process->rss_kb,
+                          &process->swap_kb, &process->threads) != 0) {
     return -1;
   }
 
@@ -530,8 +529,8 @@ int process_collect(pid_t pid, NeoProcess *process) {
    * cmdline can legitimately fail for some kernel/system processes.
    * Fall back to the command name.
    */
-  if (process_read_cmdline(pid, process->cmdline,
-                               sizeof(process->cmdline)) != 0) {
+  if (process_read_cmdline(pid, process->cmdline, sizeof(process->cmdline)) !=
+      0) {
 
     snprintf(process->cmdline, sizeof(process->cmdline), "%s", process->comm);
   }
@@ -540,8 +539,7 @@ int process_collect(pid_t pid, NeoProcess *process) {
    * I/O statistics may not be readable for every process.
    * Keep zero values in that case.
    */
-  if (process_read_io(pid, &process->read_bytes, &process->write_bytes) !=
-      0) {
+  if (process_read_io(pid, &process->read_bytes, &process->write_bytes) != 0) {
 
     process->read_bytes = 0;
     process->write_bytes = 0;

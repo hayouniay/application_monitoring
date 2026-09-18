@@ -1,5 +1,5 @@
-#ifndef NEO_MONITORING_FILTER_H
-#define NEO_MONITORING_FILTER_H
+#ifndef MONITORING_FILTER_H
+#define MONITORING_FILTER_H
 
 #include "monitoring_services.h"
 
@@ -34,15 +34,13 @@ int filter_contains_ci(const char *text, const char *pattern);
  * Check whether a process matches one of the configured
  * include patterns using its command name or command line.
  */
-int filter_match_patterns(const NeoConfig *config,
-                              const NeoProcess *process);
+int filter_match_patterns(const NeoConfig *config, const NeoProcess *process);
 
 /*
  * Check whether a process matches one of the configured
  * exclusion patterns.
  */
-int filter_match_excludes(const NeoConfig *config,
-                              const NeoProcess *process);
+int filter_match_excludes(const NeoConfig *config, const NeoProcess *process);
 
 /*
  * Check PID filters.
@@ -64,4 +62,4 @@ int filter_match_user(const NeoConfig *config, const NeoProcess *process);
  */
 int filter_match_state(const NeoConfig *config, const NeoProcess *process);
 
-#endif /* NEO_MONITORING_FILTER_H */
+#endif /* MONITORING_FILTER_H */

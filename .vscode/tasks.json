@@ -49,6 +49,50 @@
             }
         },
 
+        // ── QT BUILD ──────────────────────────────────────────────────────────
+
+        {
+            "label": "APP TOP Monitoring - Qt Build",
+            "type": "shell",
+            "command": "make qt",
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "icon": {
+                "id": "rocket",
+                "color": "terminal.ansiCyan"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Qt Debug Build",
+            "type": "shell",
+            "command": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build --target app_top_monitoring_qt",
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "icon": {
+                "id": "bug",
+                "color": "terminal.ansiMagenta"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Qt Release Build",
+            "type": "shell",
+            "command": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --target app_top_monitoring_qt",
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "icon": {
+                "id": "rocket",
+                "color": "terminal.ansiGreen"
+            }
+        },
+
         // ── CLEAN ─────────────────────────────────────────────────────────────
 
         {
@@ -80,6 +124,24 @@
             }
         },
 
+        {
+            "label": "APP TOP Monitoring - Qt Clean and Build",
+            "type": "shell",
+            "command": "make qt",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "APP TOP Monitoring - Clean"
+            ],
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "icon": {
+                "id": "refresh",
+                "color": "terminal.ansiCyan"
+            }
+        },
+
         // ── CMAKE ─────────────────────────────────────────────────────────────
 
         {
@@ -96,7 +158,11 @@
         {
             "label": "APP TOP Monitoring - CMake Build",
             "type": "shell",
-            "command": "cmake --build build --target app_top_monitoring",
+            "command": "cmake --build build",
+            "dependsOn": [
+                "APP TOP Monitoring - CMake Configure"
+            ],
+            "dependsOrder": "sequence",
             "problemMatcher": [
                 "$gcc"
             ],
@@ -106,7 +172,24 @@
             }
         },
 
-        // ── RUN ───────────────────────────────────────────────────────────────
+        {
+            "label": "APP TOP Monitoring - CMake Qt Build",
+            "type": "shell",
+            "command": "cmake --build build --target app_top_monitoring_qt",
+            "dependsOn": [
+                "APP TOP Monitoring - CMake Configure"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "icon": {
+                "id": "tools",
+                "color": "terminal.ansiCyan"
+            }
+        },
+
+        // ── RUN CLI ───────────────────────────────────────────────────────────
 
         {
             "label": "APP TOP Monitoring - Run",
@@ -247,6 +330,53 @@
             }
         },
 
+        // ── RUN QT ────────────────────────────────────────────────────────────
+
+        {
+            "label": "APP TOP Monitoring - Run Qt",
+            "type": "shell",
+            "command": "./build/app_top_monitoring_qt",
+            "options": {
+                "env": {
+                    "QT_QPA_PLATFORM": "xcb"
+                }
+            },
+            "dependsOn": [
+                "APP TOP Monitoring - Qt Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "window",
+                "color": "terminal.ansiCyan"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Run Qt Debug",
+            "type": "shell",
+            "command": "./build/app_top_monitoring_qt",
+            "dependsOn": [
+                "APP TOP Monitoring - Qt Debug Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "bug",
+                "color": "terminal.ansiMagenta"
+            }
+        },
+
         // ── INSTALL ───────────────────────────────────────────────────────────
 
         {
@@ -267,9 +397,31 @@
         // ── FORMAT ────────────────────────────────────────────────────────────
 
         {
-            "label": "APP TOP Monitoring - Format",
+            "label": "APP TOP Monitoring - Format C",
             "type": "shell",
             "command": "clang-format -i src/*.c inc/*.h",
+            "problemMatcher": [],
+            "icon": {
+                "id": "symbol-color",
+                "color": "terminal.ansiGreen"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Format Qt",
+            "type": "shell",
+            "command": "clang-format -i src/qt/*.cpp inc/qt/*.h",
+            "problemMatcher": [],
+            "icon": {
+                "id": "symbol-color",
+                "color": "terminal.ansiCyan"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Format All",
+            "type": "shell",
+            "command": "clang-format -i src/*.c inc/*.h src/qt/*.cpp inc/qt/*.h",
             "problemMatcher": [],
             "icon": {
                 "id": "symbol-color",
