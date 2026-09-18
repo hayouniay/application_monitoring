@@ -1,0 +1,33 @@
+name: "App Monitor - Verify dependencies"
+
+on:
+  workflow_call:
+
+jobs:
+  verify:
+    name: Verify dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            pkg-config \
+            qt6-base-dev
+
+      - name: Verify toolchain versions
+        run: |
+          cmake --version
+          g++ --version
+          pkg-config --modversion Qt6Core
+
+      - name: Verify required project files are present
+        run: |
+          test -f Makefile
+          test -f CMakeLists.txt
+          echo "Dependency and source checks passed."
