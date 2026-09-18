@@ -1,0 +1,128 @@
+name: Build and Publish
+
+on:
+  push:
+    branches: [ "master" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+env:
+  BUILD_DIR: build
+  CLI_TARGET: app_top_monitoring
+  QT_TARGET: app_top_monitoring_qt
+
+jobs:
+  verify-dependencies:
+    name: "Stage 1 - Verify dependencies"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            pkg-config \
+            qt6-base-dev
+
+      - name: Verify toolchain versions
+        run: |
+          cmake --version
+          g++ --version
+          pkg-config --modversion Qt6Core
+
+      - name: Verify required project files are present
+        run: |
+          test -f Makefile
+          test -f CMakeLists.txt
+          echo "Dependency and source checks passed."
+
+  build-qt:
+    name: "Stage 2 - Build Qt app"
+    needs: verify-dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config qt6-base-dev
+
+      - name: Build Qt target
+        run: make qt
+
+      - name: Upload Qt build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.QT_TARGET }}
+          path: ${{ env.BUILD_DIR }}/${{ env.QT_TARGET }}
+          if-no-files-found: error
+          retention-days: 7
+  build-cli:
+    name: "Stage 3 - Build console app"
+    needs: verify-dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
+
+      - name: Build CLI target
+        run: make cli
+
+      - name: Upload CLI build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CLI_TARGET }}
+          path: ${{ env.BUILD_DIR }}/${{ env.CLI_TARGET }}
+          if-no-files-found: error
+          retention-days: 7
+  publish:
+    name: "Stage 4 - Publish artifacts"
+    needs: [ build-qt, build-cli ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Qt artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.QT_TARGET }}
+          path: dist/qt
+
+      - name: Download CLI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CLI_TARGET }}
+          path: dist/cli
+
+      - name: Package release bundle
+        run: |
+          chmod +x dist/qt/${{ env.QT_TARGET }} dist/cli/${{ env.CLI_TARGET }}
+          tar -czf ${{ env.QT_TARGET }}.tar.gz -C dist/qt ${{ env.QT_TARGET }}
+          tar -czf ${{ env.CLI_TARGET }}.tar.gz -C dist/cli ${{ env.CLI_TARGET }}
+
+      - name: Publish combined artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: neo-monitoring-release
+          path: |
+            ${{ env.QT_TARGET }}.tar.gz
+            ${{ env.CLI_TARGET }}.tar.gz
+          retention-days: 30
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ env.QT_TARGET }}.tar.gz
+            ${{ env.CLI_TARGET }}.tar.gz
