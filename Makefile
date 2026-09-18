@@ -12,11 +12,11 @@ build:
 	cmake --build $(BUILD_DIR)
 
 cli:
-	cmake -S . -B $(BUILD_DIR)
+	cmake -S . -B $(BUILD_DIR) -DBUILD_QT_APP=OFF
 	cmake --build $(BUILD_DIR) --target $(CLI_TARGET)
 
 qt:
-	cmake -S . -B $(BUILD_DIR)
+	cmake -S . -B $(BUILD_DIR) -DBUILD_QT_APP=ON
 	cmake --build $(BUILD_DIR) --target $(QT_TARGET)
 
 release:

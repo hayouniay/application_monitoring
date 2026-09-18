@@ -19,7 +19,11 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+option(BUILD_QT_APP "Build the Qt GUI application" ON)
+
+if(BUILD_QT_APP)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+endif()
 
 set(CORE_SOURCES
     src/monitoring_services_core.c
@@ -76,50 +80,59 @@ target_link_libraries(
         monitoring_core
 )
 
-qt_add_executable(
-    app_top_monitoring_qt
+if(BUILD_QT_APP)
+    qt_add_executable(
+        app_top_monitoring_qt
 
-    src/qt/qt_application.cpp
-    src/qt/qt_main_window.cpp
-    src/qt/qt_process_model.cpp
-    src/qt/qt_monitor_controller.cpp
-    src/qt/qt_settings_dialog.cpp
-    src/qt/qt_theme.cpp
-    
-    inc/qt/qt_application.h
-    inc/qt/qt_main_window.h
-    inc/qt/qt_process_model.h
-    inc/qt/qt_monitor_controller.h
-    inc/qt/qt_settings_dialog.h
-    inc/qt/qt_theme.h
+        src/qt/qt_application.cpp
+        src/qt/qt_main_window.cpp
+        src/qt/qt_process_model.cpp
+        src/qt/qt_monitor_controller.cpp
+        src/qt/qt_settings_dialog.cpp
+        src/qt/qt_theme.cpp
 
-    ui/qt/resources/monitoring.qrc
-)
+        inc/qt/qt_application.h
+        inc/qt/qt_main_window.h
+        inc/qt/qt_process_model.h
+        inc/qt/qt_monitor_controller.h
+        inc/qt/qt_settings_dialog.h
+        inc/qt/qt_theme.h
 
-target_include_directories(
-    app_top_monitoring_qt
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/inc
-)
+        ui/qt/resources/monitoring.qrc
+    )
 
-target_compile_options(
-    app_top_monitoring_qt
-    PRIVATE
-        -Wall
-        -Wextra
-        -Wpedantic
-)
+    target_include_directories(
+        app_top_monitoring_qt
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/inc
+    )
 
-target_link_libraries(
-    app_top_monitoring_qt
-    PRIVATE
-        monitoring_core
-        Qt6::Widgets
-)
+    target_compile_options(
+        app_top_monitoring_qt
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+    )
+
+    target_link_libraries(
+        app_top_monitoring_qt
+        PRIVATE
+            monitoring_core
+            Qt6::Widgets
+    )
+endif()
 
 install(
     TARGETS
         app_top_monitoring
-        app_top_monitoring_qt
     RUNTIME DESTINATION bin
 )
+
+if(BUILD_QT_APP)
+    install(
+        TARGETS
+            app_top_monitoring_qt
+        RUNTIME DESTINATION bin
+    )
+endif()
