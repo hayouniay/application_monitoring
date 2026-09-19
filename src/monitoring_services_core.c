@@ -40,8 +40,7 @@ static int append_pid(pid_t **array, size_t *count, pid_t pid) {
   return 0;
 }
 
-static int append_pattern(char ***array, size_t *count,
-                              const char *pattern) {
+static int append_pattern(char ***array, size_t *count, const char *pattern) {
   char **tmp;
   char *copy;
 
@@ -93,8 +92,7 @@ static int process_list_reserve(NeoProcessList *list, size_t capacity) {
   return 0;
 }
 
-static int process_list_add(NeoProcessList *list,
-                                const NeoProcess *process) {
+static int process_list_add(NeoProcessList *list, const NeoProcess *process) {
   size_t new_capacity;
 
   if (list == NULL || process == NULL) {
@@ -395,8 +393,7 @@ static int parse_states(NeoConfig *config, const char *value) {
     return -1;
   }
 
-  for (i = 0; value[i] != '\0' && config->state_count < MAX_STATE_FILTER;
-       ++i) {
+  for (i = 0; value[i] != '\0' && config->state_count < MAX_STATE_FILTER; ++i) {
 
     char state = value[i];
 
@@ -633,8 +630,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
     case 'i':
       config->interval = strtod(optarg, NULL);
 
-      if (config->interval < MIN_INTERVAL ||
-          config->interval > MAX_INTERVAL) {
+      if (config->interval < MIN_INTERVAL || config->interval > MAX_INTERVAL) {
 
         fprintf(stderr, "Invalid interval: %s\n", optarg);
 
@@ -655,7 +651,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       }
 
       if (append_pattern(&config->exclude_patterns, &config->exclude_count,
-                             optarg) != 0) {
+                         optarg) != 0) {
         return -1;
       }
       break;
@@ -670,8 +666,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       break;
 
     case 'P':
-      if (parse_pid_list(&config->ppids, &config->ppid_count, optarg) !=
-          0) {
+      if (parse_pid_list(&config->ppids, &config->ppid_count, optarg) != 0) {
 
         fprintf(stderr, "Invalid PPID list: %s\n", optarg);
 
@@ -690,8 +685,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
        */
       user_arg = optarg;
 
-      snprintf(config->remote_user, sizeof(config->remote_user), "%s",
-               optarg);
+      snprintf(config->remote_user, sizeof(config->remote_user), "%s", optarg);
       break;
 
     case 's':
@@ -828,8 +822,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       break;
 
     case 2001:
-      snprintf(config->remote_host, sizeof(config->remote_host), "%s",
-               optarg);
+      snprintf(config->remote_host, sizeof(config->remote_host), "%s", optarg);
       break;
 
     case 2002:
@@ -837,13 +830,13 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       break;
 
     case 2003:
-      snprintf(config->remote_identity, sizeof(config->remote_identity),
-               "%s", optarg);
+      snprintf(config->remote_identity, sizeof(config->remote_identity), "%s",
+               optarg);
       break;
 
     case 2004:
-      snprintf(config->remote_password, sizeof(config->remote_password),
-               "%s", optarg);
+      snprintf(config->remote_password, sizeof(config->remote_password), "%s",
+               optarg);
       break;
 
     case 2005:
@@ -856,8 +849,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       break;
 
     case 2007:
-      snprintf(config->remote_file, sizeof(config->remote_file), "%s",
-               optarg);
+      snprintf(config->remote_file, sizeof(config->remote_file), "%s", optarg);
       break;
 
     case 'h':
@@ -890,7 +882,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
     }
 
     if (append_pattern(&config->patterns, &config->pattern_count,
-                           argv[optind]) != 0) {
+                       argv[optind]) != 0) {
 
       return -1;
     }
@@ -1006,8 +998,8 @@ int read_system_info(NeoSystemInfo *info) {
 /* ------------------------------------------------------------------------- */
 
 int scan_processes(const NeoConfig *config, const NeoSystemInfo *system,
-                       NeoProcessList *list, NeoPreviousList *previous,
-                       double interval) {
+                   NeoProcessList *list, NeoPreviousList *previous,
+                   double interval) {
   DIR *dir;
   struct dirent *entry;
 
@@ -1115,7 +1107,7 @@ int scan_processes(const NeoConfig *config, const NeoSystemInfo *system,
 /* ------------------------------------------------------------------------- */
 
 static int compare_processes(const NeoProcess *a, const NeoProcess *b,
-                                 NeoSortMode mode) {
+                             NeoSortMode mode) {
   switch (mode) {
 
   case SORT_CPU:

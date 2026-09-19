@@ -279,8 +279,8 @@ int read_system_info(NeoSystemInfo *info);
 /* ------------------------------------------------------------------------- */
 
 int scan_processes(const NeoConfig *config, const NeoSystemInfo *system,
-                       NeoProcessList *list, NeoPreviousList *previous,
-                       double interval);
+                   NeoProcessList *list, NeoPreviousList *previous,
+                   double interval);
 
 /* ------------------------------------------------------------------------- */
 /* Filtering                                                                 */
@@ -293,7 +293,7 @@ int process_matches(const NeoConfig *config, const NeoProcess *process);
 /* ------------------------------------------------------------------------- */
 
 void update_metrics(NeoProcess *process, const NeoPreviousSample *previous,
-                        const NeoSystemInfo *system, double interval);
+                    const NeoSystemInfo *system, double interval);
 
 /* ------------------------------------------------------------------------- */
 /* Sorting                                                                   */
@@ -326,11 +326,11 @@ int ui_is_interactive(void);
 /* ------------------------------------------------------------------------- */
 
 void output_table(const NeoConfig *config, const NeoSystemInfo *system,
-                      const NeoProcessList *list);
+                  const NeoProcessList *list);
 
 void output_csv(const NeoConfig *config, const NeoProcessList *list);
 
 void output_json(const NeoConfig *config, const NeoSystemInfo *system,
-                     const NeoProcessList *list);
+                 const NeoProcessList *list);
 
 #endif /* MONITORING_SERVICES_H */

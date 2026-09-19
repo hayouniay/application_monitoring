@@ -59,18 +59,18 @@ static int install_signals(void) {
 /* ------------------------------------------------------------------------- */
 
 static void build_remote_target(const NeoConfig *config,
-                                    NeoRemoteTarget *target) {
+                                NeoRemoteTarget *target) {
   remote_target_init(target);
 
   snprintf(target->host, sizeof(target->host), "%s", config->remote_host);
   snprintf(target->user, sizeof(target->user), "%s", config->remote_user);
-  snprintf(target->password, sizeof(target->password),
-              "%s", config->remote_password);
+  snprintf(target->password, sizeof(target->password), "%s",
+           config->remote_password);
   snprintf(target->identity_file, sizeof(target->identity_file), "%s",
-              config->remote_identity);
+           config->remote_identity);
   snprintf(target->remote_binary, sizeof(target->remote_binary), "%s",
-              config->remote_binary[0] ? config->remote_binary
-                                        : "app_top_monitoring");
+           config->remote_binary[0] ? config->remote_binary
+                                    : "app_top_monitoring");
 
   target->port = config->remote_port;
 }
@@ -80,23 +80,22 @@ static void build_ftp_target(const NeoConfig *config, NeoFtpTarget *target) {
 
   snprintf(target->host, sizeof(target->host), "%s", config->remote_host);
   snprintf(target->user, sizeof(target->user), "%s", config->remote_user);
-  snprintf(target->password, sizeof(target->password),
-              "%s", config->remote_password);
+  snprintf(target->password, sizeof(target->password), "%s",
+           config->remote_password);
   snprintf(target->remote_filename, sizeof(target->remote_filename), "%s",
-              config->remote_file);
+           config->remote_file);
 
   if (config->remote_port > 0) {
     target->port = config->remote_port;
   }
 }
 
-static void build_tftp_target(const NeoConfig *config,
-                                  NeoTftpTarget *target) {
+static void build_tftp_target(const NeoConfig *config, NeoTftpTarget *target) {
   tftp_target_init(target);
 
   snprintf(target->host, sizeof(target->host), "%s", config->remote_host);
   snprintf(target->remote_filename, sizeof(target->remote_filename), "%s",
-              config->remote_file);
+           config->remote_file);
 
   if (config->remote_port > 0) {
     target->port = config->remote_port;
@@ -107,8 +106,7 @@ static void build_tftp_target(const NeoConfig *config,
 /* Local filters applied client-side to remotely fetched processes           */
 /* ------------------------------------------------------------------------- */
 
-static void apply_local_filters(const NeoConfig *config,
-                                    NeoProcessList *list) {
+static void apply_local_filters(const NeoConfig *config, NeoProcessList *list) {
   size_t read_index;
   size_t write_index = 0;
 
@@ -156,10 +154,10 @@ static int run_remote_monitor(NeoConfig *config) {
 
     if (config->protocol == PROTOCOL_SSH) {
       result = remote_ssh_scan(&target, &list, &system_info, message,
-                                   sizeof(message));
+                               sizeof(message));
     } else {
       result = remote_telnet_scan(&target, &list, &system_info, message,
-                                      sizeof(message));
+                                  sizeof(message));
     }
 
     if (result != 0) {
@@ -235,7 +233,7 @@ static int run_deploy(NeoConfig *config) {
     build_ftp_target(config, &target);
 
     if (remote_ftp_deploy(&target, config->local_file, message,
-                              sizeof(message)) != 0) {
+                          sizeof(message)) != 0) {
 
       fprintf(stderr, "monitoring_services: %s\n", message);
 
@@ -249,7 +247,7 @@ static int run_deploy(NeoConfig *config) {
     build_tftp_target(config, &target);
 
     if (remote_tftp_deploy(&target, config->local_file, message,
-                               sizeof(message)) != 0) {
+                           sizeof(message)) != 0) {
 
       fprintf(stderr, "monitoring_services: %s\n", message);
 
@@ -313,7 +311,7 @@ static int run_local_monitor(NeoConfig *config) {
     }
 
     if (scan_processes(config, &system_info, &process_list, &previous_list,
-                           interval) != 0) {
+                       interval) != 0) {
 
       fprintf(stderr, "monitoring_services: "
                       "failed to scan /proc\n");

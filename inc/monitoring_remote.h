@@ -55,8 +55,7 @@ void tftp_target_init(NeoTftpTarget *target);
  * Returns 0 on success; -1 on failure with a reason in `message`.
  */
 int remote_ssh_scan(const NeoRemoteTarget *target, NeoProcessList *list,
-                        NeoSystemInfo *system, char *message,
-                        size_t message_size);
+                    NeoSystemInfo *system, char *message, size_t message_size);
 
 /*
  * Same as remote_ssh_scan(), but drives the system `telnet` client
@@ -68,8 +67,8 @@ int remote_ssh_scan(const NeoRemoteTarget *target, NeoProcessList *list,
  * the card supports it.
  */
 int remote_telnet_scan(const NeoRemoteTarget *target, NeoProcessList *list,
-                           NeoSystemInfo *system, char *message,
-                           size_t message_size);
+                       NeoSystemInfo *system, char *message,
+                       size_t message_size);
 
 /*
  * Lightweight SSH reachability check: logs in and checks whether the
@@ -78,7 +77,7 @@ int remote_telnet_scan(const NeoRemoteTarget *target, NeoProcessList *list,
  * `binary_found` separately), -1 if the connection itself failed.
  */
 int remote_ssh_check(const NeoRemoteTarget *target, bool *binary_found,
-                         char *message, size_t message_size);
+                     char *message, size_t message_size);
 
 /*
  * Uploads `local_path` to the card via FTP (using the system `curl`),
@@ -86,13 +85,13 @@ int remote_ssh_check(const NeoRemoteTarget *target, bool *binary_found,
  * anonymously otherwise.
  */
 int remote_ftp_deploy(const NeoFtpTarget *target, const char *local_path,
-                          char *message, size_t message_size);
+                      char *message, size_t message_size);
 
 /*
  * Uploads `local_path` to the card via TFTP put (using the system
  * `tftp` client). TFTP has no authentication.
  */
 int remote_tftp_deploy(const NeoTftpTarget *target, const char *local_path,
-                           char *message, size_t message_size);
+                       char *message, size_t message_size);
 
 #endif /* MONITORING_REMOTE_H */

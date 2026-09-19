@@ -34,7 +34,7 @@ static void dynbuf_init(NeoDynBuffer *buf) {
 }
 
 static int dynbuf_append(NeoDynBuffer *buf, const char *chunk,
-                             size_t chunk_len) {
+                         size_t chunk_len) {
   if (buf->length + chunk_len + 1 > buf->capacity) {
 
     size_t new_capacity = buf->capacity == 0 ? CHUNK_SIZE : buf->capacity * 2;
@@ -66,7 +66,7 @@ static int dynbuf_append(NeoDynBuffer *buf, const char *chunk,
 /* ------------------------------------------------------------------------- */
 
 static void set_message(char *message, size_t message_size, const char *fmt,
-                            ...) {
+                        ...) {
   va_list args;
 
   if (message == NULL || message_size == 0) {
@@ -98,8 +98,7 @@ static long long now_ms(void) {
 /* ------------------------------------------------------------------------- */
 
 static int run_command(char *const argv[], const char *stdin_data,
-                           int timeout_ms, char **out_stdout,
-                           char **out_stderr) {
+                       int timeout_ms, char **out_stdout, char **out_stderr) {
   int stdout_pipe[2];
   int stderr_pipe[2];
   int stdin_pipe[2] = {-1, -1};
@@ -236,7 +235,8 @@ static int run_command(char *const argv[], const char *stdin_data,
   {
     struct pollfd fds[2];
     int open_fds = 2;
-    long long deadline = now_ms() + (timeout_ms > 0 ? timeout_ms : DEFAULT_TIMEOUT_MS);
+    long long deadline =
+        now_ms() + (timeout_ms > 0 ? timeout_ms : DEFAULT_TIMEOUT_MS);
 
     fds[0].fd = stdout_pipe[0];
     fds[0].events = POLLIN;
@@ -282,7 +282,7 @@ static int run_command(char *const argv[], const char *stdin_data,
           if (bytes_read > 0) {
 
             dynbuf_append(i == 0 ? &stdout_buf : &stderr_buf, chunk,
-                             (size_t)bytes_read);
+                          (size_t)bytes_read);
 
           } else {
 
@@ -308,8 +308,7 @@ static int run_command(char *const argv[], const char *stdin_data,
       close(stderr_pipe[0]);
     }
 
-    dynbuf_append(&stderr_buf, "\n[timed out waiting for remote command]",
-                     40);
+    dynbuf_append(&stderr_buf, "\n[timed out waiting for remote command]", 40);
 
   } else {
 
@@ -371,8 +370,7 @@ static int remote_list_add(NeoProcessList *list, const NeoProcess *process) {
   return 0;
 }
 
-static int parse_quoted_field(const char **cursor, char *out,
-                                  size_t out_size) {
+static int parse_quoted_field(const char **cursor, char *out, size_t out_size) {
   const char *p = *cursor;
   size_t out_len = 0;
 
@@ -430,7 +428,7 @@ static int parse_csv_line(const char *line, NeoProcess *out) {
 
       field[field_index]
            [field_len < sizeof(field[0]) ? field_len : sizeof(field[0]) - 1] =
-          '\0';
+               '\0';
 
       ++field_index;
       field_len = 0;
@@ -557,14 +555,13 @@ static int parse_csv_output(const char *csv_text, NeoProcessList *list) {
  * or telnet round trip gets both instead of two.
  */
 static void build_combined_remote_command(const char *remote_binary,
-                                              char *buffer,
-                                              size_t buffer_size) {
+                                          char *buffer, size_t buffer_size) {
   snprintf(buffer, buffer_size,
-              "echo " NEO_SYSINFO_MARKER "; "
-              "grep '^MemTotal:' /proc/meminfo; nproc; "
-              "echo " NEO_CSV_MARKER "; "
-              "%s --csv --once",
-              remote_binary[0] ? remote_binary : "app_top_monitoring");
+           "echo " NEO_SYSINFO_MARKER "; "
+           "grep '^MemTotal:' /proc/meminfo; nproc; "
+           "echo " NEO_CSV_MARKER "; "
+           "%s --csv --once",
+           remote_binary[0] ? remote_binary : "app_top_monitoring");
 }
 
 static int parse_remote_system_info(const char *text, NeoSystemInfo *out) {
@@ -632,7 +629,7 @@ static int parse_remote_system_info(const char *text, NeoSystemInfo *out) {
  * the genuine markers) appears further down the capture.
  */
 static const char *find_last_occurrence(const char *haystack,
-                                            const char *needle) {
+                                        const char *needle) {
   const char *result = NULL;
   const char *cursor = haystack;
 
@@ -654,7 +651,7 @@ static const char *find_last_occurrence(const char *haystack,
  * yields a process list even if the system totals can't be recovered.
  */
 static int parse_combined_output(const char *text, NeoProcessList *list,
-                                     NeoSystemInfo *system) {
+                                 NeoSystemInfo *system) {
   const char *sysinfo_start = find_last_occurrence(text, NEO_SYSINFO_MARKER);
   const char *csv_start = find_last_occurrence(text, NEO_CSV_MARKER);
 
@@ -665,14 +662,14 @@ static int parse_combined_output(const char *text, NeoProcessList *list,
 
   if (sysinfo_start != NULL && csv_start != NULL && csv_start > sysinfo_start) {
 
-    size_t sysinfo_len = (size_t)(csv_start - (sysinfo_start +
-                                                   strlen(NEO_SYSINFO_MARKER)));
+    size_t sysinfo_len =
+        (size_t)(csv_start - (sysinfo_start + strlen(NEO_SYSINFO_MARKER)));
     char *sysinfo_block = malloc(sysinfo_len + 1);
 
     if (sysinfo_block != NULL) {
 
       memcpy(sysinfo_block, sysinfo_start + strlen(NEO_SYSINFO_MARKER),
-                sysinfo_len);
+             sysinfo_len);
 
       sysinfo_block[sysinfo_len] = '\0';
 
@@ -737,7 +734,7 @@ void tftp_target_init(NeoTftpTarget *target) {
 /* ------------------------------------------------------------------------- */
 
 static void build_user_host(const char *user, const char *host, char *buffer,
-                                size_t buffer_size) {
+                            size_t buffer_size) {
 
   if (user != NULL && user[0] != '\0') {
     snprintf(buffer, buffer_size, "%s@%s", user, host);
@@ -747,14 +744,14 @@ static void build_user_host(const char *user, const char *host, char *buffer,
 }
 
 static int build_ssh_argv(const NeoRemoteTarget *target,
-                              const char *remote_command, char **argv_buf,
-                              int argv_capacity, char *user_host_buf,
-                              size_t user_host_buf_size, char *port_buf,
-                              size_t port_buf_size) {
+                          const char *remote_command, char **argv_buf,
+                          int argv_capacity, char *user_host_buf,
+                          size_t user_host_buf_size, char *port_buf,
+                          size_t port_buf_size) {
   int argc = 0;
 
   build_user_host(target->user, target->host, user_host_buf,
-                      user_host_buf_size);
+                  user_host_buf_size);
 
   snprintf(port_buf, port_buf_size, "%d", target->port > 0 ? target->port : 22);
 
@@ -785,8 +782,7 @@ static int build_ssh_argv(const NeoRemoteTarget *target,
 }
 
 int remote_ssh_scan(const NeoRemoteTarget *target, NeoProcessList *list,
-                        NeoSystemInfo *system, char *message,
-                        size_t message_size) {
+                    NeoSystemInfo *system, char *message, size_t message_size) {
   char user_host[REMOTE_HOST_MAX + REMOTE_USER_MAX + 2];
   char port_str[16];
   char remote_command[REMOTE_PATH_MAX + 128];
@@ -807,11 +803,10 @@ int remote_ssh_scan(const NeoRemoteTarget *target, NeoProcessList *list,
   }
 
   build_combined_remote_command(target->remote_binary, remote_command,
-                                    sizeof(remote_command));
+                                sizeof(remote_command));
 
   if (build_ssh_argv(target, remote_command, argv_buf, 16, user_host,
-                         sizeof(user_host), port_str,
-                         sizeof(port_str)) < 0) {
+                     sizeof(user_host), port_str, sizeof(port_str)) < 0) {
     set_message(message, message_size, "Internal error building ssh command");
     return -1;
   }
@@ -820,8 +815,8 @@ int remote_ssh_scan(const NeoRemoteTarget *target, NeoProcessList *list,
 
   if (exit_code != 0) {
     set_message(message, message_size, "SSH command failed (exit %d): %s",
-                   exit_code,
-                   (err != NULL && err[0] != '\0') ? err : "no error output");
+                exit_code,
+                (err != NULL && err[0] != '\0') ? err : "no error output");
     free(out);
     free(err);
     return -1;
@@ -841,7 +836,7 @@ int remote_ssh_scan(const NeoRemoteTarget *target, NeoProcessList *list,
 }
 
 int remote_ssh_check(const NeoRemoteTarget *target, bool *binary_found,
-                         char *message, size_t message_size) {
+                     char *message, size_t message_size) {
   char user_host[REMOTE_HOST_MAX + REMOTE_USER_MAX + 2];
   char port_str[16];
   char remote_command[REMOTE_PATH_MAX + 96];
@@ -869,11 +864,10 @@ int remote_ssh_check(const NeoRemoteTarget *target, bool *binary_found,
            "command -v %s >/dev/null 2>&1 && echo NEO_BINARY_OK || "
            "echo NEO_BINARY_MISSING",
            target->remote_binary[0] ? target->remote_binary
-                                     : "app_top_monitoring");
+                                    : "app_top_monitoring");
 
   if (build_ssh_argv(target, remote_command, argv_buf, 16, user_host,
-                         sizeof(user_host), port_str,
-                         sizeof(port_str)) < 0) {
+                     sizeof(user_host), port_str, sizeof(port_str)) < 0) {
     set_message(message, message_size, "Internal error building ssh command");
     return -1;
   }
@@ -881,9 +875,9 @@ int remote_ssh_check(const NeoRemoteTarget *target, bool *binary_found,
   exit_code = run_command(argv_buf, NULL, DEFAULT_TIMEOUT_MS, &out, &err);
 
   if (exit_code != 0) {
-    set_message(message, message_size,
-                   "SSH connection failed (exit %d): %s", exit_code,
-                   (err != NULL && err[0] != '\0') ? err : "no error output");
+    set_message(message, message_size, "SSH connection failed (exit %d): %s",
+                exit_code,
+                (err != NULL && err[0] != '\0') ? err : "no error output");
     free(out);
     free(err);
     return -1;
@@ -895,9 +889,9 @@ int remote_ssh_check(const NeoRemoteTarget *target, bool *binary_found,
   }
 
   set_message(message, message_size, "Connected to %s (%s)", target->host,
-                 (binary_found != NULL && *binary_found)
-                     ? "monitoring tool found"
-                     : "monitoring tool not found on remote");
+              (binary_found != NULL && *binary_found)
+                  ? "monitoring tool found"
+                  : "monitoring tool not found on remote");
 
   free(out);
   free(err);
@@ -917,8 +911,8 @@ int remote_ssh_check(const NeoRemoteTarget *target, bool *binary_found,
 /* ------------------------------------------------------------------------- */
 
 int remote_telnet_scan(const NeoRemoteTarget *target, NeoProcessList *list,
-                           NeoSystemInfo *system, char *message,
-                           size_t message_size) {
+                       NeoSystemInfo *system, char *message,
+                       size_t message_size) {
   char port_str[16];
   char remote_command[REMOTE_PATH_MAX + 128];
   char script[2200];
@@ -940,24 +934,25 @@ int remote_telnet_scan(const NeoRemoteTarget *target, NeoProcessList *list,
   }
 
   build_combined_remote_command(target->remote_binary, remote_command,
-                                    sizeof(remote_command));
+                                sizeof(remote_command));
 
   if (target->user[0] != '\0') {
-    offset += (size_t)snprintf(script + offset, sizeof(script) - offset,
-                                   "%s\n", target->user);
+    offset += (size_t)snprintf(script + offset, sizeof(script) - offset, "%s\n",
+                               target->user);
   }
 
   if (target->password[0] != '\0') {
-    offset += (size_t)snprintf(script + offset, sizeof(script) - offset,
-                                   "%s\n", target->password);
+    offset += (size_t)snprintf(script + offset, sizeof(script) - offset, "%s\n",
+                               target->password);
   }
 
   offset += (size_t)snprintf(script + offset, sizeof(script) - offset, "%s\n",
-                                 remote_command);
+                             remote_command);
 
   snprintf(script + offset, sizeof(script) - offset, "exit\n");
 
-  snprintf(port_str, sizeof(port_str), "%d", target->port > 0 ? target->port : 23);
+  snprintf(port_str, sizeof(port_str), "%d",
+           target->port > 0 ? target->port : 23);
 
   argv_buf[0] = "telnet";
   argv_buf[1] = (char *)target->host;
@@ -975,8 +970,7 @@ int remote_telnet_scan(const NeoRemoteTarget *target, NeoProcessList *list,
    */
   if (exit_code != 0 && (out == NULL || out[0] == '\0')) {
     set_message(message, message_size, "Telnet connection failed: %s",
-                   (err != NULL && err[0] != '\0') ? err
-                                                    : "no error output");
+                (err != NULL && err[0] != '\0') ? err : "no error output");
     free(out);
     free(err);
     return -1;
@@ -989,14 +983,13 @@ int remote_telnet_scan(const NeoRemoteTarget *target, NeoProcessList *list,
     return -1;
   }
 
-
   if (list->count == 0) {
     set_message(message, message_size,
-                   "Connected, but no valid data was found in the telnet "
-                   "session output. Check the login sequence and that "
-                   "\"%s\" is on the card's PATH.",
-                   target->remote_binary[0] ? target->remote_binary
-                                             : "app_top_monitoring");
+                "Connected, but no valid data was found in the telnet "
+                "session output. Check the login sequence and that "
+                "\"%s\" is on the card's PATH.",
+                target->remote_binary[0] ? target->remote_binary
+                                         : "app_top_monitoring");
     free(out);
     free(err);
     return -1;
@@ -1013,7 +1006,7 @@ int remote_telnet_scan(const NeoRemoteTarget *target, NeoProcessList *list,
 /* ------------------------------------------------------------------------- */
 
 int remote_ftp_deploy(const NeoFtpTarget *target, const char *local_path,
-                          char *message, size_t message_size) {
+                      char *message, size_t message_size) {
   char url[REMOTE_HOST_MAX + REMOTE_USER_MAX * 2 + REMOTE_PATH_MAX + 32];
   char *argv_buf[8];
   char *out = NULL;
@@ -1033,21 +1026,20 @@ int remote_ftp_deploy(const NeoFtpTarget *target, const char *local_path,
 
   if (access(local_path, R_OK) != 0) {
     set_message(message, message_size, "Local file not readable: %s",
-                   local_path);
+                local_path);
     return -1;
   }
 
-  remote_name = target->remote_filename[0] != '\0'
-                    ? target->remote_filename
-                    : local_path;
+  remote_name =
+      target->remote_filename[0] != '\0' ? target->remote_filename : local_path;
 
   if (target->user[0] != '\0') {
     snprintf(url, sizeof(url), "ftp://%s:%s@%s:%d/%s", target->user,
-                target->password, target->host,
-                target->port > 0 ? target->port : 21, remote_name);
+             target->password, target->host,
+             target->port > 0 ? target->port : 21, remote_name);
   } else {
     snprintf(url, sizeof(url), "ftp://%s:%d/%s", target->host,
-                target->port > 0 ? target->port : 21, remote_name);
+             target->port > 0 ? target->port : 21, remote_name);
   }
 
   argv_buf[0] = "curl";
@@ -1061,7 +1053,7 @@ int remote_ftp_deploy(const NeoFtpTarget *target, const char *local_path,
 
   if (exit_code != 0) {
     set_message(message, message_size, "FTP upload failed: %s",
-                   (err != NULL && err[0] != '\0') ? err : "unknown error");
+                (err != NULL && err[0] != '\0') ? err : "unknown error");
     free(out);
     free(err);
     return -1;
@@ -1078,7 +1070,7 @@ int remote_ftp_deploy(const NeoFtpTarget *target, const char *local_path,
 /* ------------------------------------------------------------------------- */
 
 int remote_tftp_deploy(const NeoTftpTarget *target, const char *local_path,
-                           char *message, size_t message_size) {
+                       char *message, size_t message_size) {
   char port_str[16];
   char *argv_buf[12];
   int argc = 0;
@@ -1099,11 +1091,12 @@ int remote_tftp_deploy(const NeoTftpTarget *target, const char *local_path,
 
   if (access(local_path, R_OK) != 0) {
     set_message(message, message_size, "Local file not readable: %s",
-                   local_path);
+                local_path);
     return -1;
   }
 
-  snprintf(port_str, sizeof(port_str), "%d", target->port > 0 ? target->port : 69);
+  snprintf(port_str, sizeof(port_str), "%d",
+           target->port > 0 ? target->port : 69);
 
   argv_buf[argc++] = "tftp";
   argv_buf[argc++] = "-m";
@@ -1115,7 +1108,7 @@ int remote_tftp_deploy(const NeoTftpTarget *target, const char *local_path,
   argv_buf[argc++] = (char *)local_path;
   argv_buf[argc++] =
       (char *)(target->remote_filename[0] ? target->remote_filename
-                                              : local_path);
+                                          : local_path);
   argv_buf[argc++] = NULL;
 
   exit_code = run_command(argv_buf, NULL, DEFAULT_TIMEOUT_MS, &out, &err);
@@ -1135,10 +1128,9 @@ int remote_tftp_deploy(const NeoTftpTarget *target, const char *local_path,
     if (exit_code != 0 || looks_like_error) {
 
       set_message(message, message_size, "TFTP transfer failed: %s",
-                     (out != NULL && out[0] != '\0')
-                         ? out
-                         : (err != NULL && err[0] != '\0') ? err
-                                                            : "unknown error");
+                  (out != NULL && out[0] != '\0')   ? out
+                  : (err != NULL && err[0] != '\0') ? err
+                                                    : "unknown error");
       free(out);
       free(err);
       return -1;
