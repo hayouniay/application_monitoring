@@ -43,6 +43,14 @@ public:
 
   void setProcesses(const NeoProcessList &processes);
 
+  /*
+   * Overload used by remote monitoring (SSH/Telnet), which builds
+   * its result as a QVector rather than a NeoProcessList since the
+   * data is assembled on a background thread and marshaled back to
+   * the UI thread as a plain Qt value type.
+   */
+  void setProcesses(const QVector<NeoProcess> &processes);
+
   const NeoProcess *processAt(int row) const;
 
   void clear();

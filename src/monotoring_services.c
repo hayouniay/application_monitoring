@@ -1,12 +1,14 @@
 #define _GNU_SOURCE
 
 #include "monitoring_output.h"
+#include "monitoring_remote.h"
 #include "monitoring_services.h"
 #include "monitoring_ui.h"
 
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 /* ------------------------------------------------------------------------- */
@@ -53,11 +55,216 @@ static int install_signals(void) {
 }
 
 /* ------------------------------------------------------------------------- */
-/* Main                                                                      */
+/* Remote target construction                                                */
 /* ------------------------------------------------------------------------- */
 
-int main(int argc, char **argv) {
-  NeoConfig config;
+static void build_remote_target(const NeoConfig *config,
+                                NeoRemoteTarget *target) {
+  remote_target_init(target);
+
+  snprintf(target->host, sizeof(target->host), "%s", config->remote_host);
+  snprintf(target->user, sizeof(target->user), "%s", config->remote_user);
+  snprintf(target->password, sizeof(target->password), "%s",
+           config->remote_password);
+  snprintf(target->identity_file, sizeof(target->identity_file), "%s",
+           config->remote_identity);
+  snprintf(target->remote_binary, sizeof(target->remote_binary), "%s",
+           config->remote_binary[0] ? config->remote_binary
+                                    : "app_top_monitoring");
+
+  target->port = config->remote_port;
+}
+
+static void build_ftp_target(const NeoConfig *config, NeoFtpTarget *target) {
+  ftp_target_init(target);
+
+  snprintf(target->host, sizeof(target->host), "%s", config->remote_host);
+  snprintf(target->user, sizeof(target->user), "%s", config->remote_user);
+  snprintf(target->password, sizeof(target->password), "%s",
+           config->remote_password);
+  snprintf(target->remote_filename, sizeof(target->remote_filename), "%s",
+           config->remote_file);
+
+  if (config->remote_port > 0) {
+    target->port = config->remote_port;
+  }
+}
+
+static void build_tftp_target(const NeoConfig *config, NeoTftpTarget *target) {
+  tftp_target_init(target);
+
+  snprintf(target->host, sizeof(target->host), "%s", config->remote_host);
+  snprintf(target->remote_filename, sizeof(target->remote_filename), "%s",
+           config->remote_file);
+
+  if (config->remote_port > 0) {
+    target->port = config->remote_port;
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Local filters applied client-side to remotely fetched processes           */
+/* ------------------------------------------------------------------------- */
+
+static void apply_local_filters(const NeoConfig *config, NeoProcessList *list) {
+  size_t read_index;
+  size_t write_index = 0;
+
+  for (read_index = 0; read_index < list->count; ++read_index) {
+
+    if (process_matches(config, &list->items[read_index])) {
+
+      if (write_index != read_index) {
+        list->items[write_index] = list->items[read_index];
+      }
+
+      ++write_index;
+    }
+  }
+
+  list->count = write_index;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Remote monitoring (ssh / telnet)                                          */
+/* ------------------------------------------------------------------------- */
+
+static int run_remote_monitor(NeoConfig *config) {
+  NeoRemoteTarget target;
+  NeoProcessList list;
+  NeoSystemInfo system_info;
+
+  char message[REMOTE_MESSAGE_MAX];
+
+  if (config->remote_host[0] == '\0') {
+    fprintf(stderr, "monitoring_services: --host is required for "
+                    "--protocol ssh/telnet\n");
+    return EXIT_FAILURE;
+  }
+
+  build_remote_target(config, &target);
+
+  memset(&system_info, 0, sizeof(system_info));
+
+  process_list_init(&list);
+
+  while (running) {
+
+    int result;
+
+    if (config->protocol == PROTOCOL_SSH) {
+      result = remote_ssh_scan(&target, &list, &system_info, message,
+                               sizeof(message));
+    } else {
+      result = remote_telnet_scan(&target, &list, &system_info, message,
+                                  sizeof(message));
+    }
+
+    if (result != 0) {
+
+      fprintf(stderr, "monitoring_services: %s\n", message);
+
+      process_list_free(&list);
+
+      return EXIT_FAILURE;
+    }
+
+    apply_local_filters(config, &list);
+
+    sort_processes(&list, config->sort_mode, config->reverse);
+
+    if (config->json) {
+
+      output_json(config, &system_info, &list);
+
+    } else if (config->csv) {
+
+      output_csv(config, &list);
+
+    } else {
+
+      printf("Remote monitoring via %s: %s%s%s\n\n",
+             config->protocol == PROTOCOL_SSH ? "SSH" : "Telnet",
+             target.user[0] ? target.user : "", target.user[0] ? "@" : "",
+             target.host);
+
+      output_table(config, &system_info, &list);
+    }
+
+    if (config->once) {
+      break;
+    }
+
+    sleep((unsigned int)(config->interval > 1.0 ? config->interval : 1.0));
+  }
+
+  process_list_free(&list);
+
+  return EXIT_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Deploy (ftp / tftp)                                                       */
+/* ------------------------------------------------------------------------- */
+
+static int run_deploy(NeoConfig *config) {
+  char message[REMOTE_MESSAGE_MAX];
+
+  if (config->remote_host[0] == '\0') {
+    fprintf(stderr, "monitoring_services: --host is required for "
+                    "--protocol ftp/tftp\n");
+    return EXIT_FAILURE;
+  }
+
+  if (config->local_file[0] == '\0') {
+    fprintf(stderr, "monitoring_services: --local-file is required for "
+                    "--protocol ftp/tftp\n");
+    return EXIT_FAILURE;
+  }
+
+  printf("Deploying %s to %s via %s...\n", config->local_file,
+         config->remote_host,
+         config->protocol == PROTOCOL_FTP ? "FTP" : "TFTP");
+
+  if (config->protocol == PROTOCOL_FTP) {
+
+    NeoFtpTarget target;
+
+    build_ftp_target(config, &target);
+
+    if (remote_ftp_deploy(&target, config->local_file, message,
+                          sizeof(message)) != 0) {
+
+      fprintf(stderr, "monitoring_services: %s\n", message);
+
+      return EXIT_FAILURE;
+    }
+
+  } else {
+
+    NeoTftpTarget target;
+
+    build_tftp_target(config, &target);
+
+    if (remote_tftp_deploy(&target, config->local_file, message,
+                           sizeof(message)) != 0) {
+
+      fprintf(stderr, "monitoring_services: %s\n", message);
+
+      return EXIT_FAILURE;
+    }
+  }
+
+  printf("Deploy finished successfully.\n");
+
+  return EXIT_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Local monitoring (original behavior, unchanged)                           */
+/* ------------------------------------------------------------------------- */
+
+static int run_local_monitor(NeoConfig *config) {
   NeoSystemInfo system_info;
 
   NeoProcessList process_list;
@@ -68,39 +275,11 @@ int main(int argc, char **argv) {
 
   double interval;
 
-  config_init(&config);
   process_list_init(&process_list);
   previous_list_init(&previous_list);
 
-  /* ------------------------------------------------------------------ */
-  /* Parse command line                                                  */
-  /* ------------------------------------------------------------------ */
-
-  if (config_parse(&config, argc, argv) != 0) {
-
-    config_free(&config);
-    return EXIT_FAILURE;
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Install signal handlers                                             */
-  /* ------------------------------------------------------------------ */
-
-  if (install_signals() != 0) {
-
-    fprintf(stderr, "monitoring_services: "
-                    "failed to install signal handlers\n");
-
-    config_free(&config);
-    return EXIT_FAILURE;
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Determine terminal mode                                             */
-  /* ------------------------------------------------------------------ */
-
   interactive =
-      ui_is_interactive() && !config.batch && !config.csv && !config.json;
+      ui_is_interactive() && !config->batch && !config->csv && !config->json;
 
   if (interactive) {
 
@@ -109,7 +288,6 @@ int main(int argc, char **argv) {
       fprintf(stderr, "monitoring_services: "
                       "failed to initialize terminal\n");
 
-      config_free(&config);
       return EXIT_FAILURE;
     }
 
@@ -118,19 +296,12 @@ int main(int argc, char **argv) {
     ui_hide_cursor();
   }
 
-  /* ------------------------------------------------------------------ */
-  /* Main monitoring loop                                                */
-  /* ------------------------------------------------------------------ */
-
-  interval = config.interval;
+  interval = config->interval;
 
   while (running) {
 
     int force_refresh = 0;
 
-    /*
-     * Read current system information.
-     */
     if (read_system_info(&system_info) != 0) {
 
       fprintf(stderr, "monitoring_services: "
@@ -139,10 +310,7 @@ int main(int argc, char **argv) {
       break;
     }
 
-    /*
-     * Scan /proc and calculate process metrics.
-     */
-    if (scan_processes(&config, &system_info, &process_list, &previous_list,
+    if (scan_processes(config, &system_info, &process_list, &previous_list,
                        interval) != 0) {
 
       fprintf(stderr, "monitoring_services: "
@@ -151,67 +319,44 @@ int main(int argc, char **argv) {
       break;
     }
 
-    /*
-     * Sort before output.
-     */
-    sort_processes(&process_list, config.sort_mode, config.reverse);
+    sort_processes(&process_list, config->sort_mode, config->reverse);
 
-    /* -------------------------------------------------------------- */
-    /* Output                                                         */
-    /* -------------------------------------------------------------- */
+    if (config->json) {
 
-    if (config.json) {
+      output_json(config, &system_info, &process_list);
 
-      output_json(&config, &system_info, &process_list);
+    } else if (config->csv) {
 
-    } else if (config.csv) {
-
-      output_csv(&config, &process_list);
+      output_csv(config, &process_list);
 
     } else if (interactive) {
 
       ui_clear();
 
-      output_table(&config, &system_info, &process_list);
+      output_table(config, &system_info, &process_list);
 
     } else {
 
-      /*
-       * Batch mode without CSV/JSON uses the normal table.
-       */
-      output_table(&config, &system_info, &process_list);
+      output_table(config, &system_info, &process_list);
     }
 
-    /* -------------------------------------------------------------- */
-    /* One-shot mode                                                   */
-    /* -------------------------------------------------------------- */
-
-    if (config.once) {
+    if (config->once) {
       break;
     }
 
-    /*
-     * CSV and JSON are intended primarily for snapshots.
-     * Batch mode therefore performs one scan unless the caller
-     * explicitly uses normal interactive operation.
-     */
-    if (config.batch && !interactive) {
+    if (config->batch && !interactive) {
       break;
     }
-
-    /* -------------------------------------------------------------- */
-    /* Interactive wait                                                */
-    /* -------------------------------------------------------------- */
 
     if (interactive) {
 
       int key;
 
-      key = ui_wait(config.interval);
+      key = ui_wait(config->interval);
 
       if (key >= 0) {
 
-        if (!ui_handle_key(&config, key, &force_refresh)) {
+        if (!ui_handle_key(config, key, &force_refresh)) {
 
           running = 0;
           break;
@@ -224,29 +369,16 @@ int main(int argc, char **argv) {
 
     } else {
 
-      /*
-       * Non-interactive fallback.
-       */
-      sleep((unsigned int)(config.interval > 1.0 ? config.interval : 1.0));
+      sleep((unsigned int)(config->interval > 1.0 ? config->interval : 1.0));
     }
 
-    /*
-     * Preserve the current interactive interval.
-     */
-    interval = config.interval;
+    interval = config->interval;
   }
-
-  /* ------------------------------------------------------------------ */
-  /* Cleanup                                                             */
-  /* ------------------------------------------------------------------ */
 
   if (ui_initialized) {
 
     ui_restore();
 
-    /*
-     * Move to a clean line after the live display.
-     */
     putchar('\n');
   }
 
@@ -254,7 +386,53 @@ int main(int argc, char **argv) {
 
   previous_list_free(&previous_list);
 
+  return running ? EXIT_SUCCESS : EXIT_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Main                                                                      */
+/* ------------------------------------------------------------------------- */
+
+int main(int argc, char **argv) {
+  NeoConfig config;
+  int result;
+
+  config_init(&config);
+
+  if (config_parse(&config, argc, argv) != 0) {
+
+    config_free(&config);
+    return EXIT_FAILURE;
+  }
+
+  if (install_signals() != 0) {
+
+    fprintf(stderr, "monitoring_services: "
+                    "failed to install signal handlers\n");
+
+    config_free(&config);
+    return EXIT_FAILURE;
+  }
+
+  switch (config.protocol) {
+
+  case PROTOCOL_SSH:
+  case PROTOCOL_TELNET:
+    result = run_remote_monitor(&config);
+    break;
+
+  case PROTOCOL_FTP:
+  case PROTOCOL_TFTP:
+    result = run_deploy(&config);
+    break;
+
+  case PROTOCOL_LOCAL:
+  default:
+    result = run_local_monitor(&config);
+    break;
+  }
+
   config_free(&config);
 
-  return running ? EXIT_SUCCESS : EXIT_SUCCESS;
+  return result;
 }

@@ -1,8 +1,10 @@
 #include "qt/qt_main_window.h"
+#include <cstdio>
 
 #include "qt/qt_application.h"
 #include "qt/qt_monitor_controller.h"
 #include "qt/qt_process_model.h"
+#include "qt/qt_remote_dialog.h"
 #include "qt/qt_settings_dialog.h"
 #include "qt/qt_theme.h"
 
@@ -36,7 +38,9 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
       m_sortCombo(nullptr), m_stateCombo(nullptr), m_treeCheck(nullptr),
       m_refreshInterval(nullptr), m_processView(nullptr), m_detailText(nullptr),
       m_refreshButton(nullptr), m_pauseButton(nullptr),
-      m_settingsButton(nullptr), m_themeButton(nullptr), m_monitoring(true) {
+      m_settingsButton(nullptr), m_themeButton(nullptr),
+      m_remoteButton(nullptr), m_backToLocalButton(nullptr),
+      m_remoteDialog(nullptr), m_monitoring(true), m_viewingRemote(false) {
   setupUi();
 
   connect(m_refreshTimer, &QTimer::timeout, this, &NeoQtMainWindow::refresh);
@@ -49,6 +53,12 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
 
   connect(m_settingsButton, &QPushButton::clicked, this,
           &NeoQtMainWindow::showSettings);
+
+  connect(m_remoteButton, &QPushButton::clicked, this,
+          &NeoQtMainWindow::showRemoteDialog);
+
+  connect(m_backToLocalButton, &QPushButton::clicked, this,
+          &NeoQtMainWindow::backToLocalMonitoring);
 
   connect(m_filterEdit, &QLineEdit::textChanged, this,
           [this](const QString &text) {
@@ -170,6 +180,12 @@ void NeoQtMainWindow::setupToolbar() {
 
   m_settingsButton = new QPushButton(QStringLiteral("Settings"), this);
 
+  m_remoteButton = new QPushButton(QStringLiteral("Connect to Remote"), this);
+
+  m_backToLocalButton = new QPushButton(QStringLiteral("Back to Local"), this);
+
+  m_backToLocalButton->setVisible(false);
+
   m_themeButton = new QPushButton(this);
 
   m_themeButton->setObjectName(QStringLiteral("themeToggleButton"));
@@ -179,6 +195,18 @@ void NeoQtMainWindow::setupToolbar() {
   toolbar->addWidget(m_refreshButton);
   toolbar->addWidget(m_pauseButton);
   toolbar->addWidget(m_settingsButton);
+  toolbar->addWidget(m_remoteButton);
+
+  /*
+   * Deliberately NOT added to the toolbar: with enough buttons
+   * already there, a narrower window pushes extra widgets into
+   * Qt's toolbar overflow/extension area, where they become
+   * effectively unclickable (a real, reproducible bug caught while
+   * testing this). The status bar's permanent-widget area has no
+   * such overflow behavior and is a natural home for this kind of
+   * contextual "you're viewing X, click to go back" control.
+   */
+  statusBar()->addPermanentWidget(m_backToLocalButton);
 
   /*
    * Push the theme toggle to the far right of the toolbar.
@@ -376,6 +404,82 @@ void NeoQtMainWindow::showSettings() {
   dialog.setConfig(m_monitorController->config());
 
   dialog.exec();
+}
+
+void NeoQtMainWindow::showRemoteDialog() {
+  if (m_remoteDialog == nullptr) {
+    m_remoteDialog = new NeoQtRemoteDialog(this);
+
+    connect(m_remoteDialog, &QObject::destroyed, this,
+            [this]() { m_remoteDialog = nullptr; });
+
+    connect(m_remoteDialog, &NeoQtRemoteDialog::processesFetched, this,
+            &NeoQtMainWindow::showRemoteProcesses);
+  }
+
+  m_remoteDialog->show();
+  m_remoteDialog->raise();
+  m_remoteDialog->activateWindow();
+}
+
+void NeoQtMainWindow::showRemoteProcesses(QVector<NeoProcess> processes,
+                                          NeoSystemInfo systemInfo,
+                                          QString sourceLabel) {
+  Q_UNUSED(systemInfo);
+
+  /*
+   * Pause local polling while showing remote data so the refresh
+   * timer doesn't immediately overwrite it with local /proc results.
+   */
+  if (m_monitoring) {
+    m_refreshTimer->stop();
+    m_monitorController->stop();
+
+    m_monitoring = false;
+
+    m_pauseButton->setText(QStringLiteral("Resume"));
+  }
+
+  m_processModel->setProcesses(processes);
+
+  updateStats();
+  updateDetails();
+
+  m_viewingRemote = true;
+
+  setWindowTitle(QStringLiteral("NEO Monitoring Services  —  Remote: %1")
+                     .arg(sourceLabel));
+
+  statusBar()->showMessage(QStringLiteral("Showing %1 process(es) from %2")
+                               .arg(processes.count())
+                               .arg(sourceLabel));
+
+  m_refreshButton->setEnabled(false);
+  m_backToLocalButton->setVisible(true);
+}
+
+void NeoQtMainWindow::backToLocalMonitoring() {
+  if (!m_viewingRemote)
+    return;
+
+  m_viewingRemote = false;
+
+  setWindowTitle(QStringLiteral("NEO Monitoring Services"));
+
+  m_backToLocalButton->setVisible(false);
+  m_refreshButton->setEnabled(true);
+
+  m_monitoring = true;
+
+  m_pauseButton->setText(QStringLiteral("Pause"));
+
+  m_monitorController->start();
+
+  m_refreshTimer->start(m_refreshInterval->value());
+
+  refresh();
+
+  statusBar()->showMessage(QStringLiteral("Back to local monitoring"));
 }
 
 void NeoQtMainWindow::processSelectionChanged() { updateDetails(); }

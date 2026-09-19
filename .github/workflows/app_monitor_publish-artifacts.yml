@@ -39,9 +39,6 @@ jobs:
             ${{ env.CLI_TARGET }}.tar.gz
           retention-days: 30
 
-      # Optional: attach the same bundle to a GitHub Release when the
-      # push is a version tag (e.g. v1.2.0). Remove this step if you
-      # don't tag releases.
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2

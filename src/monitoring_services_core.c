@@ -280,6 +280,12 @@ void config_init(NeoConfig *config) {
   config->filter_user_enabled = false;
 
   config->sort_mode = SORT_CPU;
+
+  config->protocol = PROTOCOL_LOCAL;
+  config->remote_port = 0;
+
+  snprintf(config->remote_binary, sizeof(config->remote_binary),
+           "app_top_monitoring");
 }
 
 /* ------------------------------------------------------------------------- */
@@ -524,6 +530,24 @@ void print_usage(const char *program) {
          "  -h, --help              Show this help\n"
          "  -V, --version           Show version\n"
          "\n"
+         "Remote card (SSH/Telnet monitoring, FTP/TFTP deploy):\n"
+         "      --protocol NAME     local (default), ssh, telnet, ftp, "
+         "tftp\n"
+         "      --host HOST         Remote card address\n"
+         "  -u, --user USER         Login username (ssh/telnet/ftp)\n"
+         "      --password PASS     Login password (telnet/ftp)\n"
+         "      --port N            Override the protocol's default port\n"
+         "      --identity KEYFILE  SSH private key\n"
+         "      --remote-bin NAME   Name of this tool on the card "
+         "(ssh/telnet)\n"
+         "      --local-file PATH   File to upload (ftp/tftp)\n"
+         "      --remote-file NAME  Destination filename (ftp/tftp)\n"
+         "\n"
+         "  Filtering, sorting and output flags above still apply to "
+         "ssh/telnet\n"
+         "  results (fetched from the card, then filtered/sorted "
+         "locally).\n"
+         "\n"
          "Interactive keys:\n"
          "  q  quit\n"
          "  c  sort CPU\n"
@@ -576,10 +600,21 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       {"json", no_argument, 0, 1010},
       {"no-color", no_argument, 0, 1011},
 
+      {"protocol", required_argument, 0, 2000},
+      {"host", required_argument, 0, 2001},
+      {"port", required_argument, 0, 2002},
+      {"identity", required_argument, 0, 2003},
+      {"password", required_argument, 0, 2004},
+      {"remote-bin", required_argument, 0, 2005},
+      {"local-file", required_argument, 0, 2006},
+      {"remote-file", required_argument, 0, 2007},
+
       {"help", no_argument, 0, 'h'},
       {"version", no_argument, 0, 'V'},
 
       {0, 0, 0, 0}};
+
+  const char *user_arg = NULL;
 
   if (config == NULL) {
     return -1;
@@ -640,12 +675,17 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       break;
 
     case 'u':
-      if (parse_user(config, optarg) != 0) {
+      /*
+       * `--user` is dual-purpose: in local mode it is validated below
+       * as a local process filter (existing behavior, preserved
+       * exactly). In a remote mode (--protocol ssh/telnet/ftp) it is
+       * simply the login username on the remote host and may not
+       * exist as a local account at all, so validation is skipped
+       * for those modes once the final protocol is known.
+       */
+      user_arg = optarg;
 
-        fprintf(stderr, "Unknown user or invalid UID: %s\n", optarg);
-
-        return -1;
-      }
+      snprintf(config->remote_user, sizeof(config->remote_user), "%s", optarg);
       break;
 
     case 's':
@@ -753,6 +793,65 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       config->no_color = true;
       break;
 
+    case 2000:
+
+      if (strcasecmp(optarg, "local") == 0) {
+        config->protocol = PROTOCOL_LOCAL;
+
+      } else if (strcasecmp(optarg, "ssh") == 0) {
+        config->protocol = PROTOCOL_SSH;
+
+      } else if (strcasecmp(optarg, "telnet") == 0) {
+        config->protocol = PROTOCOL_TELNET;
+
+      } else if (strcasecmp(optarg, "ftp") == 0) {
+        config->protocol = PROTOCOL_FTP;
+
+      } else if (strcasecmp(optarg, "tftp") == 0) {
+        config->protocol = PROTOCOL_TFTP;
+
+      } else {
+        fprintf(stderr,
+                "Unknown protocol: %s (expected local, ssh, telnet, "
+                "ftp or tftp)\n",
+                optarg);
+
+        return -1;
+      }
+
+      break;
+
+    case 2001:
+      snprintf(config->remote_host, sizeof(config->remote_host), "%s", optarg);
+      break;
+
+    case 2002:
+      config->remote_port = atoi(optarg);
+      break;
+
+    case 2003:
+      snprintf(config->remote_identity, sizeof(config->remote_identity), "%s",
+               optarg);
+      break;
+
+    case 2004:
+      snprintf(config->remote_password, sizeof(config->remote_password), "%s",
+               optarg);
+      break;
+
+    case 2005:
+      snprintf(config->remote_binary, sizeof(config->remote_binary), "%s",
+               optarg);
+      break;
+
+    case 2006:
+      snprintf(config->local_file, sizeof(config->local_file), "%s", optarg);
+      break;
+
+    case 2007:
+      snprintf(config->remote_file, sizeof(config->remote_file), "%s", optarg);
+      break;
+
     case 'h':
       print_usage(argv[0]);
       exit(EXIT_SUCCESS);
@@ -796,6 +895,21 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
    */
   if (config->csv || config->json) {
     config->batch = true;
+  }
+
+  /*
+   * Only validate --user as a local account/UID when it is actually
+   * going to be used as a local process filter. In a remote mode it
+   * is a login username on the remote host instead.
+   */
+  if (config->protocol == PROTOCOL_LOCAL && user_arg != NULL) {
+
+    if (parse_user(config, user_arg) != 0) {
+
+      fprintf(stderr, "Unknown user or invalid UID: %s\n", user_arg);
+
+      return -1;
+    }
   }
 
   return 0;
