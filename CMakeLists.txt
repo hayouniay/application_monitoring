@@ -31,6 +31,7 @@ set(CORE_SOURCES
     src/monitoring_metrics.c
     src/monitoring_filter.c
     src/monitoring_output.c
+    src/monitoring_remote.c
 )
 
 add_library(

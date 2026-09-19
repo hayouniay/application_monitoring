@@ -25,6 +25,10 @@
 #define MAX_STATE_FILTER 16
 #define INITIAL_CAPACITY 128
 
+/* Remote connectivity limits */
+#define MAX_HOST 256
+#define MAX_REMOTE_PATH 512
+
 /* ------------------------------------------------------------------------- */
 /* Sorting                                                                   */
 /* ------------------------------------------------------------------------- */
@@ -37,6 +41,18 @@ typedef enum {
   SORT_IO_READ,
   SORT_IO_WRITE
 } NeoSortMode;
+
+/* ------------------------------------------------------------------------- */
+/* Remote protocol                                                           */
+/* ------------------------------------------------------------------------- */
+
+typedef enum {
+  PROTOCOL_LOCAL = 0,
+  PROTOCOL_SSH,
+  PROTOCOL_TELNET,
+  PROTOCOL_FTP,
+  PROTOCOL_TFTP
+} NeoProtocol;
 
 /* ------------------------------------------------------------------------- */
 /* Process information                                                       */
@@ -151,7 +167,7 @@ typedef struct {
   /* Number of displayed processes */
   size_t limit;
 
-  /* User filter */
+  /* User filter (local mode) */
   uid_t filter_uid;
   bool filter_uid_enabled;
 
@@ -180,6 +196,30 @@ typedef struct {
   /* Exclude patterns */
   char **exclude_patterns;
   size_t exclude_count;
+
+  /* --------------------------------------------------------------------- */
+  /* Remote connectivity (--protocol ssh|telnet|ftp|tftp)                  */
+  /* --------------------------------------------------------------------- */
+
+  NeoProtocol protocol;
+
+  /* Login target. `remote_user` doubles as the login username for
+   * ssh/telnet/ftp; it does NOT feed the local process user filter
+   * above when protocol != PROTOCOL_LOCAL. */
+  char remote_host[MAX_HOST];
+  char remote_user[MAX_USER];
+  char remote_password[MAX_USER];
+  int remote_port; /* 0 = use the protocol's default port */
+
+  /* ssh only: optional private key */
+  char remote_identity[MAX_REMOTE_PATH];
+
+  /* ssh/telnet: name/path of the monitoring CLI on the remote card */
+  char remote_binary[MAX_REMOTE_PATH];
+
+  /* ftp/tftp: file to upload and its destination name */
+  char local_file[MAX_REMOTE_PATH];
+  char remote_file[MAX_REMOTE_PATH];
 
 } NeoConfig;
 
@@ -239,8 +279,8 @@ int read_system_info(NeoSystemInfo *info);
 /* ------------------------------------------------------------------------- */
 
 int scan_processes(const NeoConfig *config, const NeoSystemInfo *system,
-                   NeoProcessList *list, NeoPreviousList *previous,
-                   double interval);
+                       NeoProcessList *list, NeoPreviousList *previous,
+                       double interval);
 
 /* ------------------------------------------------------------------------- */
 /* Filtering                                                                 */
@@ -253,7 +293,7 @@ int process_matches(const NeoConfig *config, const NeoProcess *process);
 /* ------------------------------------------------------------------------- */
 
 void update_metrics(NeoProcess *process, const NeoPreviousSample *previous,
-                    const NeoSystemInfo *system, double interval);
+                        const NeoSystemInfo *system, double interval);
 
 /* ------------------------------------------------------------------------- */
 /* Sorting                                                                   */
@@ -286,11 +326,11 @@ int ui_is_interactive(void);
 /* ------------------------------------------------------------------------- */
 
 void output_table(const NeoConfig *config, const NeoSystemInfo *system,
-                  const NeoProcessList *list);
+                      const NeoProcessList *list);
 
 void output_csv(const NeoConfig *config, const NeoProcessList *list);
 
 void output_json(const NeoConfig *config, const NeoSystemInfo *system,
-                 const NeoProcessList *list);
+                     const NeoProcessList *list);
 
 #endif /* MONITORING_SERVICES_H */
