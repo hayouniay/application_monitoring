@@ -23,6 +23,7 @@ option(BUILD_QT_APP "Build the Qt GUI application" ON)
 
 if(BUILD_QT_APP)
     find_package(Qt6 REQUIRED COMPONENTS Widgets)
+    find_package(Threads REQUIRED)
 endif()
 
 set(CORE_SOURCES
@@ -91,6 +92,7 @@ if(BUILD_QT_APP)
         src/qt/qt_monitor_controller.cpp
         src/qt/qt_settings_dialog.cpp
         src/qt/qt_theme.cpp
+        src/qt/qt_remote_dialog.cpp
 
         inc/qt/qt_application.h
         inc/qt/qt_main_window.h
@@ -98,6 +100,7 @@ if(BUILD_QT_APP)
         inc/qt/qt_monitor_controller.h
         inc/qt/qt_settings_dialog.h
         inc/qt/qt_theme.h
+        inc/qt/qt_remote_dialog.h
 
         ui/qt/resources/monitoring.qrc
     )
@@ -121,6 +124,7 @@ if(BUILD_QT_APP)
         PRIVATE
             monitoring_core
             Qt6::Widgets
+            Threads::Threads
     )
 endif()
 

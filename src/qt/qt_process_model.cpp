@@ -192,6 +192,14 @@ void NeoQtProcessModel::setProcesses(const NeoProcessList &processes) {
   endResetModel();
 }
 
+void NeoQtProcessModel::setProcesses(const QVector<NeoProcess> &processes) {
+  beginResetModel();
+
+  m_processes = processes;
+
+  endResetModel();
+}
+
 const NeoProcess *NeoQtProcessModel::processAt(int row) const {
   if (row < 0 || row >= m_processes.size())
     return nullptr;

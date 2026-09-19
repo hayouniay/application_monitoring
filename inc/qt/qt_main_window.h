@@ -2,6 +2,11 @@
 #define QT_MAIN_WINDOW_H
 
 #include <QMainWindow>
+#include <QVector>
+
+extern "C" {
+#include "monitoring_services.h"
+}
 
 class QLabel;
 class QLineEdit;
@@ -16,6 +21,7 @@ class QGroupBox;
 
 class NeoQtProcessModel;
 class NeoQtMonitorController;
+class NeoQtRemoteDialog;
 
 class NeoQtMainWindow final : public QMainWindow {
   Q_OBJECT
@@ -28,6 +34,10 @@ private slots:
   void refresh();
   void toggleMonitoring();
   void showSettings();
+  void showRemoteDialog();
+  void showRemoteProcesses(QVector<NeoProcess> processes,
+                           NeoSystemInfo systemInfo, QString sourceLabel);
+  void backToLocalMonitoring();
   void processSelectionChanged();
 
 private:
@@ -69,8 +79,13 @@ private:
   QPushButton *m_pauseButton;
   QPushButton *m_settingsButton;
   QPushButton *m_themeButton;
+  QPushButton *m_remoteButton;
+  QPushButton *m_backToLocalButton;
+
+  NeoQtRemoteDialog *m_remoteDialog;
 
   bool m_monitoring;
+  bool m_viewingRemote;
 };
 
 #endif // QT_MAIN_WINDOW_H
