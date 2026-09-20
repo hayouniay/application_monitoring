@@ -110,6 +110,48 @@ All existing filtering, sorting, and output flags (`--csv`, `--json`, `--sort`, 
 
 **Runtime dependencies** for remote features (client tools spawned as subprocesses, not linked libraries): `openssh-client`, `telnet`, `curl` (used for FTP), and `tftp-hpa`. The card itself needs the matching server (`sshd`, `telnetd`, an FTP server, or a TFTP server).
 
+### Capture and Graphing
+
+`--capture` records system-wide metrics over time and produces a chart report you can open in a browser — useful for spotting trends (a slow memory leak, a periodic CPU spike) that a live table doesn't make obvious.
+
+| Flag | Description |
+| --- | --- |
+| `--capture` | Capture until you press **Ctrl+C** |
+| `--capture=SECONDS` | Capture for `SECONDS` then stop automatically — note the `=`, required by `getopt` for an optional argument; `--capture 30` (space-separated) does **not** work as a duration (`30` would instead be read as a search pattern) |
+| `--capture-output PATH` | Base path for the output files, no extension (default: `capture_<unix-timestamp>` in the current directory) |
+
+Each sample records: system-wide CPU utilization, memory utilization, swap utilization (all computed directly from `/proc/stat`/`/proc/meminfo`, independent of per-process figures), and the aggregate I/O rate and count of whatever processes match the active filters at that moment. A capture session honors the same `--interval`, filter, and sort flags as normal monitoring.
+
+Two files are written when the capture ends:
+
+* **`PATH.csv`** — the raw samples, for your own analysis.
+* **`PATH.html`** — a self-contained interactive report (uses [Chart.js](https://www.chartjs.org/) from a CDN, so viewing it requires internet access): one line chart per metric (CPU, Memory, Swap, I/O) in a single page, each with a legend, plus a dropdown to show all graphs at once or isolate just one.
+
+```bash
+# Capture for 30 seconds, then open the report
+./build/app_top_monitoring --capture=30 --interval 1
+xdg-open capture_*.html   # or just double-click it
+
+# Capture indefinitely until Ctrl+C, with a fixed output name
+./build/app_top_monitoring --capture --capture-output myrun
+```
+
+Currently local monitoring only — combining `--capture` with `--protocol ssh|telnet|ftp|tftp` is rejected with a clear error rather than silently doing the wrong thing.
+
+The Qt app has its own native equivalent — see **Live Graphs** below — rather than generating an HTML file.
+
+### Live Graphs (Qt)
+
+**View → Live Graphs...** opens a window with four native, `QPainter`-drawn line graphs — CPU, Memory, Swap, and I/O (Read/Write) — fed one sample at a time as local monitoring refreshes, using the same system-wide `/proc` readers as `--capture`. No new Qt module or external dependency (no QtCharts, no internet access needed, unlike the HTML report's CDN-hosted Chart.js).
+
+* A dropdown lets you show all four graphs at once or isolate a single one — the native equivalent of the HTML report's toggle.
+* Each graph shows a live legend (current value) in the series' color, gridlines with axis labels, and a soft gradient fill under single-series curves.
+* CPU/Memory/Swap use a fixed 0–100% axis; I/O auto-scales since it's unbounded.
+* Colors follow the app's light/dark theme automatically.
+* **Clear** resets all four graphs' history.
+
+Paused while viewing remote data (mirrors the process table); resumes when you go **Back to Local**.
+
 ### CLI Interactive Controls
 
 The terminal monitor provides interactive controls including:
@@ -160,6 +202,7 @@ The Qt application provides a graphical interface with:
 * Include/exclude patterns
 * Light/dark theme toggle, persisted between sessions
 * **Connect to Remote** dialog: SSH/Telnet monitoring and FTP/TFTP deploy, all four protocols in one place
+* **Live Graphs** window: native CPU/Memory/Swap/I-O line graphs, no browser or extra Qt module required
 * A successful remote fetch replaces the table's contents with the card's process list; a **Back to Local** control (status bar) returns to live local monitoring
 
 The Qt interface uses the same C monitoring backend as the CLI. Remote network calls run on a background thread so the UI never blocks.
@@ -280,6 +323,7 @@ app_top_monitoring/
 │   ├── monitoring_ui.h
 │   ├── monitoring_output.h
 │   ├── monitoring_remote.h
+│   ├── monitoring_capture.h
 │   │
 │   └── qt/
 │       ├── qt_application.h
@@ -288,7 +332,9 @@ app_top_monitoring/
 │       ├── qt_monitor_controller.h
 │       ├── qt_settings_dialog.h
 │       ├── qt_remote_dialog.h
-│       └── qt_theme.h
+│       ├── qt_theme.h
+│       ├── qt_wave_widget.h
+│       └── qt_graphs_window.h
 │
 ├── src/
 │   ├── monotoring_services.c
@@ -299,6 +345,7 @@ app_top_monitoring/
 │   ├── monitoring_ui.c
 │   ├── monitoring_output.c
 │   ├── monitoring_remote.c
+│   ├── monitoring_capture.c
 │   │
 │   └── qt/
 │       ├── qt_application.cpp
@@ -307,7 +354,9 @@ app_top_monitoring/
 │       ├── qt_monitor_controller.cpp
 │       ├── qt_settings_dialog.cpp
 │       ├── qt_remote_dialog.cpp
-│       └── qt_theme.cpp
+│       ├── qt_theme.cpp
+│       ├── qt_wave_widget.cpp
+│       └── qt_graphs_window.cpp
 │
 └── ui/
     └── qt/
@@ -489,6 +538,12 @@ Export JSON:
 ./build/app_top_monitoring --json
 ```
 
+Capture 30 seconds of metrics and generate a chart report:
+
+```bash
+./build/app_top_monitoring --capture=30
+```
+
 ### Remote Examples
 
 Monitor a card over SSH (key-based login):
@@ -506,13 +561,15 @@ Monitor a card over Telnet:
 Deploy the binary to a card over FTP:
 
 ```bash
-./build/app_top_monitoring --protocol ftp --host 192.168.1.50 --user root --local-file ./build/app_top_monitoring
+./build/app_top_monitoring --protocol ftp --host 192.168.1.50 --user root \
+    --local-file ./build/app_top_monitoring
 ```
 
 Deploy the binary to a card over TFTP (no authentication):
 
 ```bash
-./build/app_top_monitoring --protocol tftp --host 192.168.1.50 --local-file ./build/app_top_monitoring
+./build/app_top_monitoring --protocol tftp --host 192.168.1.50 \
+    --local-file ./build/app_top_monitoring
 ```
 
 See [`REMOTE_TESTING.md`](REMOTE_TESTING.md) to try these against local test servers before pointing them at real hardware.
@@ -584,6 +641,7 @@ The project currently contains:
 * Interactive terminal UI
 * Remote monitoring over SSH and Telnet
 * Remote deployment over FTP and TFTP
+* Time-series capture (`--capture`) with an interactive HTML/Chart.js report
 * Qt 6 application
 * Qt process model
 * Qt monitoring controller

@@ -286,6 +286,10 @@ void config_init(NeoConfig *config) {
 
   snprintf(config->remote_binary, sizeof(config->remote_binary),
            "app_top_monitoring");
+
+  config->capture_enabled = false;
+  config->capture_duration_seconds = 0.0;
+  config->capture_output[0] = '\0';
 }
 
 /* ------------------------------------------------------------------------- */
@@ -548,6 +552,22 @@ void print_usage(const char *program) {
          "  results (fetched from the card, then filtered/sorted "
          "locally).\n"
          "\n"
+         "Capture (record metrics over time, then plot them):\n"
+         "      --capture           Capture until Ctrl+C is pressed\n"
+         "      --capture=SECONDS   Capture for SECONDS then stop "
+         "automatically\n"
+         "                          (note the '=' - required for optional "
+         "getopt args)\n"
+         "      --capture-output PATH  Base path for output files "
+         "(no extension);\n"
+         "                             default: capture_<timestamp> in "
+         "the cwd\n"
+         "\n"
+         "  Writes PATH.csv (raw samples) and PATH.html (an interactive\n"
+         "  Chart.js report: CPU / Memory / Swap / I/O graphs in one page,\n"
+         "  with a dropdown to show all graphs or isolate one). Currently\n"
+         "  local monitoring only (not combined with --protocol).\n"
+         "\n"
          "Interactive keys:\n"
          "  q  quit\n"
          "  c  sort CPU\n"
@@ -608,6 +628,9 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       {"remote-bin", required_argument, 0, 2005},
       {"local-file", required_argument, 0, 2006},
       {"remote-file", required_argument, 0, 2007},
+
+      {"capture", optional_argument, 0, 3000},
+      {"capture-output", required_argument, 0, 3001},
 
       {"help", no_argument, 0, 'h'},
       {"version", no_argument, 0, 'V'},
@@ -850,6 +873,39 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
 
     case 2007:
       snprintf(config->remote_file, sizeof(config->remote_file), "%s", optarg);
+      break;
+
+    case 3000:
+      config->capture_enabled = true;
+
+      if (optarg != NULL) {
+
+        char *endptr = NULL;
+        const double seconds = strtod(optarg, &endptr);
+
+        if (endptr == optarg || *endptr != '\0' || seconds <= 0.0) {
+
+          fprintf(stderr,
+                  "Invalid --capture duration: %s "
+                  "(use --capture=SECONDS, e.g. --capture=30)\n",
+                  optarg);
+
+          return -1;
+        }
+
+        config->capture_duration_seconds = seconds;
+
+      } else {
+
+        /* No value: capture until SIGINT (Ctrl+C). */
+        config->capture_duration_seconds = 0.0;
+      }
+
+      break;
+
+    case 3001:
+      snprintf(config->capture_output, sizeof(config->capture_output), "%s",
+               optarg);
       break;
 
     case 'h':

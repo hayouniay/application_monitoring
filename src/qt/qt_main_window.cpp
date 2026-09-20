@@ -2,13 +2,19 @@
 #include <cstdio>
 
 #include "qt/qt_application.h"
+#include "qt/qt_graphs_window.h"
 #include "qt/qt_monitor_controller.h"
 #include "qt/qt_process_model.h"
 #include "qt/qt_remote_dialog.h"
 #include "qt/qt_settings_dialog.h"
 #include "qt/qt_theme.h"
 
+extern "C" {
+#include "monitoring_capture.h"
+}
+
 #include <QAbstractItemView>
+#include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
@@ -16,6 +22,7 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMenuBar>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSizePolicy>
@@ -40,7 +47,8 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
       m_refreshButton(nullptr), m_pauseButton(nullptr),
       m_settingsButton(nullptr), m_themeButton(nullptr),
       m_remoteButton(nullptr), m_backToLocalButton(nullptr),
-      m_remoteDialog(nullptr), m_monitoring(true), m_viewingRemote(false) {
+      m_remoteDialog(nullptr), m_graphsWindow(nullptr), m_monitoring(true),
+      m_viewingRemote(false) {
   setupUi();
 
   connect(m_refreshTimer, &QTimer::timeout, this, &NeoQtMainWindow::refresh);
@@ -95,6 +103,27 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
 
             updateStats();
             updateDetails();
+
+            if (m_graphsWindow != nullptr) {
+              double cpuPercent = 0.0;
+              double memPercent = 0.0;
+              double swapPercent = 0.0;
+
+              capture_read_system(&cpuPercent, &memPercent, &swapPercent);
+
+              double ioRead = 0.0;
+              double ioWrite = 0.0;
+
+              const NeoProcessList &list = m_monitorController->processes();
+
+              for (size_t i = 0; i < list.count; ++i) {
+                ioRead += list.items[i].io_read_mb_s;
+                ioWrite += list.items[i].io_write_mb_s;
+              }
+
+              m_graphsWindow->addSample(cpuPercent, memPercent, swapPercent,
+                                        ioRead, ioWrite);
+            }
           });
 
   connect(m_monitorController, &NeoQtMonitorController::systemInfoUpdated, this,
@@ -123,6 +152,7 @@ void NeoQtMainWindow::setupUi() {
   resize(1400, 850);
 
   setupToolbar();
+  setupMenuBar();
 
   m_centralWidget = new QWidget(this);
 
@@ -230,6 +260,16 @@ void NeoQtMainWindow::setupToolbar() {
     connect(application, &NeoQtApplication::themeChanged, this,
             [this](NeoTheme) { updateThemeButtonLabel(); });
   }
+}
+
+void NeoQtMainWindow::setupMenuBar() {
+  auto *viewMenu = menuBar()->addMenu(QStringLiteral("&View"));
+
+  QAction *liveGraphsAction =
+      viewMenu->addAction(QStringLiteral("Live Graphs..."));
+
+  connect(liveGraphsAction, &QAction::triggered, this,
+          &NeoQtMainWindow::showGraphsWindow);
 }
 
 void NeoQtMainWindow::setupStats() {
@@ -480,6 +520,19 @@ void NeoQtMainWindow::backToLocalMonitoring() {
   refresh();
 
   statusBar()->showMessage(QStringLiteral("Back to local monitoring"));
+}
+
+void NeoQtMainWindow::showGraphsWindow() {
+  if (m_graphsWindow == nullptr) {
+    m_graphsWindow = new NeoQtGraphsWindow(this);
+
+    connect(m_graphsWindow, &QObject::destroyed, this,
+            [this]() { m_graphsWindow = nullptr; });
+  }
+
+  m_graphsWindow->show();
+  m_graphsWindow->raise();
+  m_graphsWindow->activateWindow();
 }
 
 void NeoQtMainWindow::processSelectionChanged() { updateDetails(); }
