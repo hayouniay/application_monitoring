@@ -1,5 +1,31 @@
 {
     "version": "2.0.0",
+    "inputs": [
+        {
+            "id": "remoteHost",
+            "type": "promptString",
+            "description": "Remote card IP/hostname",
+            "default": "192.168.1.50"
+        },
+        {
+            "id": "remoteUser",
+            "type": "promptString",
+            "description": "Remote login username",
+            "default": "root"
+        },
+        {
+            "id": "captureDuration",
+            "type": "promptString",
+            "description": "Capture duration in seconds",
+            "default": "30"
+        },
+        {
+            "id": "capturePath",
+            "type": "promptString",
+            "description": "Capture output base path (no extension)",
+            "default": "capture_run"
+        }
+    ],
     "tasks": [
 
         // ── BUILD ─────────────────────────────────────────────────────────────
@@ -310,10 +336,14 @@
             }
         },
 
+        // ── REMOTE (SSH / Telnet / FTP / TFTP) ──────────────────────────────────
+        // Host/user are prompted for each run rather than hardcoded. See
+        // REMOTE_TESTING.md for setting up local test servers for each protocol.
+
         {
             "label": "APP TOP Monitoring - Run SSH",
             "type": "shell",
-            "command": "./build/app_top_monitoring ssh",
+            "command": "./build/app_top_monitoring --protocol ssh --host ${input:remoteHost} --user ${input:remoteUser}",
             "dependsOn": [
                 "APP TOP Monitoring - Build"
             ],
@@ -327,6 +357,123 @@
             "icon": {
                 "id": "radio-tower",
                 "color": "terminal.ansiCyan"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Run Telnet",
+            "type": "shell",
+            "command": "./build/app_top_monitoring --protocol telnet --host ${input:remoteHost} --user ${input:remoteUser}",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "plug",
+                "color": "terminal.ansiYellow"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Deploy FTP",
+            "type": "shell",
+            "command": "./build/app_top_monitoring --protocol ftp --host ${input:remoteHost} --user ${input:remoteUser} --local-file ./build/app_top_monitoring",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "cloud-upload",
+                "color": "terminal.ansiGreen"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Deploy TFTP",
+            "type": "shell",
+            "command": "./build/app_top_monitoring --protocol tftp --host ${input:remoteHost} --local-file ./build/app_top_monitoring",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "cloud-upload",
+                "color": "terminal.ansiYellow"
+            }
+        },
+
+        // ── CAPTURE ───────────────────────────────────────────────────────────
+
+        {
+            "label": "APP TOP Monitoring - Capture (N seconds)",
+            "type": "shell",
+            "command": "./build/app_top_monitoring --capture=${input:captureDuration} --capture-output ${input:capturePath}",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "graph-line",
+                "color": "terminal.ansiMagenta"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Capture (until Ctrl+C)",
+            "type": "shell",
+            "command": "./build/app_top_monitoring --capture --capture-output ${input:capturePath}",
+            "dependsOn": [
+                "APP TOP Monitoring - Build"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "graph-line",
+                "color": "terminal.ansiBlue"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Open Latest Capture Report",
+            "type": "shell",
+            "command": "xdg-open \"$(ls -t capture_*.html \"${input:capturePath}.html\" 2>/dev/null | head -1)\"",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            },
+            "icon": {
+                "id": "link-external",
+                "color": "terminal.ansiBlue"
             }
         },
 

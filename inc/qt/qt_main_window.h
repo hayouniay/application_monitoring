@@ -22,6 +22,7 @@ class QGroupBox;
 class NeoQtProcessModel;
 class NeoQtMonitorController;
 class NeoQtRemoteDialog;
+class NeoQtGraphsWindow;
 
 class NeoQtMainWindow final : public QMainWindow {
   Q_OBJECT
@@ -38,11 +39,13 @@ private slots:
   void showRemoteProcesses(QVector<NeoProcess> processes,
                            NeoSystemInfo systemInfo, QString sourceLabel);
   void backToLocalMonitoring();
+  void showGraphsWindow();
   void processSelectionChanged();
 
 private:
   void setupUi();
   void setupToolbar();
+  void setupMenuBar();
   void setupStats();
   QGroupBox *setupFilters();
   void setupProcessView();
@@ -83,6 +86,7 @@ private:
   QPushButton *m_backToLocalButton;
 
   NeoQtRemoteDialog *m_remoteDialog;
+  NeoQtGraphsWindow *m_graphsWindow;
 
   bool m_monitoring;
   bool m_viewingRemote;

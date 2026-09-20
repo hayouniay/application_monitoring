@@ -221,6 +221,21 @@ typedef struct {
   char local_file[MAX_REMOTE_PATH];
   char remote_file[MAX_REMOTE_PATH];
 
+  /* --------------------------------------------------------------------- */
+  /* Capture (--capture[=SECONDS], --capture-output PATH)                  */
+  /* --------------------------------------------------------------------- */
+
+  /* True once --capture is given at all. */
+  bool capture_enabled;
+
+  /* 0 = run until SIGINT (Ctrl+C); >0 = stop automatically after this
+   * many seconds. */
+  double capture_duration_seconds;
+
+  /* Base path (no extension) for the .csv/.html output; empty = an
+   * automatic timestamped name in the current directory. */
+  char capture_output[MAX_REMOTE_PATH];
+
 } NeoConfig;
 
 /* ------------------------------------------------------------------------- */

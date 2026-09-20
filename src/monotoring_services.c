@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include "monitoring_capture.h"
 #include "monitoring_output.h"
 #include "monitoring_remote.h"
 #include "monitoring_services.h"
@@ -9,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 /* ------------------------------------------------------------------------- */
@@ -390,6 +392,118 @@ static int run_local_monitor(NeoConfig *config) {
 }
 
 /* ------------------------------------------------------------------------- */
+/* Capture mode (--capture)                                                  */
+/* ------------------------------------------------------------------------- */
+
+static int run_capture_mode(NeoConfig *config) {
+  NeoSystemInfo system_info;
+  NeoProcessList process_list;
+  NeoPreviousList previous_list;
+  NeoCaptureSeries series;
+
+  time_t capture_start;
+  char csv_path[600];
+  char html_path[600];
+
+  process_list_init(&process_list);
+  previous_list_init(&previous_list);
+  capture_series_init(&series);
+
+  capture_start = time(NULL);
+
+  if (config->capture_duration_seconds > 0.0) {
+    printf("Capturing for %.0f second(s)...\n",
+           config->capture_duration_seconds);
+  } else {
+    printf("Capturing... press Ctrl+C to stop.\n");
+  }
+
+  while (running) {
+
+    if (read_system_info(&system_info) != 0) {
+
+      fprintf(stderr, "monitoring_services: "
+                      "failed to read system information\n");
+      break;
+    }
+
+    if (scan_processes(config, &system_info, &process_list, &previous_list,
+                       config->interval) != 0) {
+
+      fprintf(stderr, "monitoring_services: "
+                      "failed to scan /proc\n");
+      break;
+    }
+
+    sort_processes(&process_list, config->sort_mode, config->reverse);
+
+    if (capture_sample(&series, &process_list) != 0) {
+
+      fprintf(stderr, "monitoring_services: "
+                      "failed to record capture sample\n");
+      break;
+    }
+
+    printf("\rCaptured %zu sample(s) (%.0fs elapsed)...", series.count,
+           difftime(time(NULL), capture_start));
+
+    fflush(stdout);
+
+    if (config->capture_duration_seconds > 0.0 &&
+        difftime(time(NULL), capture_start) >=
+            config->capture_duration_seconds) {
+      break;
+    }
+
+    sleep((unsigned int)(config->interval > 1.0 ? config->interval : 1.0));
+  }
+
+  putchar('\n');
+
+  if (series.count == 0) {
+
+    fprintf(stderr, "monitoring_services: no samples were captured\n");
+
+    process_list_free(&process_list);
+    previous_list_free(&previous_list);
+    capture_series_free(&series);
+
+    return EXIT_FAILURE;
+  }
+
+  if (config->capture_output[0] != '\0') {
+
+    snprintf(csv_path, sizeof(csv_path), "%s.csv", config->capture_output);
+    snprintf(html_path, sizeof(html_path), "%s.html", config->capture_output);
+
+  } else {
+
+    const time_t now = time(NULL);
+
+    snprintf(csv_path, sizeof(csv_path), "capture_%lld.csv", (long long)now);
+    snprintf(html_path, sizeof(html_path), "capture_%lld.html", (long long)now);
+  }
+
+  if (capture_write_csv(&series, csv_path) != 0) {
+    fprintf(stderr, "monitoring_services: failed to write %s\n", csv_path);
+  } else {
+    printf("Wrote %s\n", csv_path);
+  }
+
+  if (capture_write_html_report(&series, html_path) != 0) {
+    fprintf(stderr, "monitoring_services: failed to write %s\n", html_path);
+  } else {
+    printf("Wrote %s - open it in a browser to view the graphs.\n", html_path);
+  }
+
+  process_list_free(&process_list);
+  previous_list_free(&previous_list);
+  capture_series_free(&series);
+
+  return EXIT_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------- */
 /* Main                                                                      */
 /* ------------------------------------------------------------------------- */
 
@@ -414,6 +528,15 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
+  if (config.capture_enabled && config.protocol != PROTOCOL_LOCAL) {
+
+    fprintf(stderr, "monitoring_services: --capture currently only "
+                    "supports local monitoring (not with --protocol)\n");
+
+    config_free(&config);
+    return EXIT_FAILURE;
+  }
+
   switch (config.protocol) {
 
   case PROTOCOL_SSH:
@@ -428,7 +551,8 @@ int main(int argc, char **argv) {
 
   case PROTOCOL_LOCAL:
   default:
-    result = run_local_monitor(&config);
+    result = config.capture_enabled ? run_capture_mode(&config)
+                                    : run_local_monitor(&config);
     break;
   }
 

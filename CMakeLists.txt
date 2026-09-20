@@ -33,6 +33,7 @@ set(CORE_SOURCES
     src/monitoring_filter.c
     src/monitoring_output.c
     src/monitoring_remote.c
+    src/monitoring_capture.c
 )
 
 add_library(
@@ -93,6 +94,8 @@ if(BUILD_QT_APP)
         src/qt/qt_settings_dialog.cpp
         src/qt/qt_theme.cpp
         src/qt/qt_remote_dialog.cpp
+        src/qt/qt_wave_widget.cpp
+        src/qt/qt_graphs_window.cpp
 
         inc/qt/qt_application.h
         inc/qt/qt_main_window.h
@@ -101,6 +104,8 @@ if(BUILD_QT_APP)
         inc/qt/qt_settings_dialog.h
         inc/qt/qt_theme.h
         inc/qt/qt_remote_dialog.h
+        inc/qt/qt_wave_widget.h
+        inc/qt/qt_graphs_window.h
 
         ui/qt/resources/monitoring.qrc
     )
