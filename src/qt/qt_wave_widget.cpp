@@ -2,6 +2,7 @@
 #include "qt/qt_application.h"
 #include "qt/qt_theme.h"
 
+#include <QFontMetrics>
 #include <QLinearGradient>
 #include <QPainter>
 #include <QPainterPath>
@@ -11,7 +12,8 @@
 NeoQtWaveWidget::NeoQtWaveWidget(QWidget *parent)
     : QWidget(parent), m_label(QStringLiteral("Series")), m_color(33, 111, 237),
       m_hasSecondSeries(false), m_unit(), m_maxSamples(120),
-      m_fixedRange(false), m_rangeMin(0.0), m_rangeMax(100.0) {
+      m_showTimeAxis(false), m_fixedRange(false), m_rangeMin(0.0),
+      m_rangeMax(100.0) {
   setMinimumHeight(140);
 }
 
@@ -43,11 +45,18 @@ void NeoQtWaveWidget::setMaxSamples(int maxSamples) {
   m_maxSamples = std::max(2, maxSamples);
 }
 
+void NeoQtWaveWidget::setShowTimeAxis(bool show) { m_showTimeAxis = show; }
+
 void NeoQtWaveWidget::addSample(double value, double secondValue) {
   m_samples.append(value);
+  m_timestamps.append(QTime::currentTime());
 
   while (m_samples.size() > m_maxSamples) {
     m_samples.removeFirst();
+  }
+
+  while (m_timestamps.size() > m_maxSamples) {
+    m_timestamps.removeFirst();
   }
 
   if (m_hasSecondSeries) {
@@ -64,6 +73,7 @@ void NeoQtWaveWidget::addSample(double value, double secondValue) {
 void NeoQtWaveWidget::clear() {
   m_samples.clear();
   m_samples2.clear();
+  m_timestamps.clear();
   update();
 }
 
@@ -102,7 +112,7 @@ void NeoQtWaveWidget::paintEvent(QPaintEvent *event) {
   /* Reserve margins for the legend line (top) and axis labels
    * (left/bottom). */
   const int marginTop = 26;
-  const int marginBottom = 18;
+  const int marginBottom = m_showTimeAxis ? 24 : 18;
   const int marginLeft = 44;
   const int marginRight = 12;
 
@@ -285,4 +295,36 @@ void NeoQtWaveWidget::paintEvent(QPaintEvent *event) {
   }
 
   painter.restore();
+
+  /* --- X-axis clock-time labels (Capture window only) ---------------- */
+
+  if (m_showTimeAxis && !m_timestamps.isEmpty()) {
+    painter.setPen(textColor);
+
+    const int tickCount = std::min(5, static_cast<int>(m_timestamps.size()));
+
+    for (int t = 0; t < tickCount; ++t) {
+      const int index =
+          (tickCount == 1)
+              ? 0
+              : static_cast<int>((static_cast<double>(t) / (tickCount - 1)) *
+                                 (m_timestamps.size() - 1));
+
+      const double x = mapPoint(index, m_timestamps.size(), 0.0).x();
+
+      const QString label =
+          m_timestamps[index].toString(QStringLiteral("HH:mm:ss"));
+
+      const QFontMetrics metrics(painter.font());
+      const int textWidth = metrics.horizontalAdvance(label);
+
+      double labelX = x - textWidth / 2.0;
+      labelX = std::clamp(labelX, 2.0,
+                          static_cast<double>(width()) - textWidth - 2.0);
+
+      painter.drawText(
+          QRectF(labelX, plotRect.bottom() + 2, textWidth, marginBottom - 2),
+          Qt::AlignLeft | Qt::AlignTop, label);
+    }
+  }
 }

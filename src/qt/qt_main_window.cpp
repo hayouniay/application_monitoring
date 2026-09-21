@@ -2,6 +2,7 @@
 #include <cstdio>
 
 #include "qt/qt_application.h"
+#include "qt/qt_capture_window.h"
 #include "qt/qt_graphs_window.h"
 #include "qt/qt_monitor_controller.h"
 #include "qt/qt_process_model.h"
@@ -47,8 +48,8 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
       m_refreshButton(nullptr), m_pauseButton(nullptr),
       m_settingsButton(nullptr), m_themeButton(nullptr),
       m_remoteButton(nullptr), m_backToLocalButton(nullptr),
-      m_remoteDialog(nullptr), m_graphsWindow(nullptr), m_monitoring(true),
-      m_viewingRemote(false) {
+      m_remoteDialog(nullptr), m_graphsWindow(nullptr),
+      m_captureWindow(nullptr), m_monitoring(true), m_viewingRemote(false) {
   setupUi();
 
   connect(m_refreshTimer, &QTimer::timeout, this, &NeoQtMainWindow::refresh);
@@ -104,7 +105,7 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
             updateStats();
             updateDetails();
 
-            if (m_graphsWindow != nullptr) {
+            if (m_graphsWindow != nullptr || m_captureWindow != nullptr) {
               double cpuPercent = 0.0;
               double memPercent = 0.0;
               double swapPercent = 0.0;
@@ -121,8 +122,15 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
                 ioWrite += list.items[i].io_write_mb_s;
               }
 
-              m_graphsWindow->addSample(cpuPercent, memPercent, swapPercent,
-                                        ioRead, ioWrite);
+              if (m_graphsWindow != nullptr) {
+                m_graphsWindow->addSample(cpuPercent, memPercent, swapPercent,
+                                          ioRead, ioWrite);
+              }
+
+              if (m_captureWindow != nullptr) {
+                m_captureWindow->feedSample(cpuPercent, memPercent, swapPercent,
+                                            ioRead, ioWrite, list.count);
+              }
             }
           });
 
@@ -270,6 +278,11 @@ void NeoQtMainWindow::setupMenuBar() {
 
   connect(liveGraphsAction, &QAction::triggered, this,
           &NeoQtMainWindow::showGraphsWindow);
+
+  QAction *captureAction = viewMenu->addAction(QStringLiteral("Capture..."));
+
+  connect(captureAction, &QAction::triggered, this,
+          &NeoQtMainWindow::showCaptureWindow);
 }
 
 void NeoQtMainWindow::setupStats() {
@@ -533,6 +546,19 @@ void NeoQtMainWindow::showGraphsWindow() {
   m_graphsWindow->show();
   m_graphsWindow->raise();
   m_graphsWindow->activateWindow();
+}
+
+void NeoQtMainWindow::showCaptureWindow() {
+  if (m_captureWindow == nullptr) {
+    m_captureWindow = new NeoQtCaptureWindow(this);
+
+    connect(m_captureWindow, &QObject::destroyed, this,
+            [this]() { m_captureWindow = nullptr; });
+  }
+
+  m_captureWindow->show();
+  m_captureWindow->raise();
+  m_captureWindow->activateWindow();
 }
 
 void NeoQtMainWindow::processSelectionChanged() { updateDetails(); }

@@ -23,6 +23,7 @@ class NeoQtProcessModel;
 class NeoQtMonitorController;
 class NeoQtRemoteDialog;
 class NeoQtGraphsWindow;
+class NeoQtCaptureWindow;
 
 class NeoQtMainWindow final : public QMainWindow {
   Q_OBJECT
@@ -40,6 +41,7 @@ private slots:
                            NeoSystemInfo systemInfo, QString sourceLabel);
   void backToLocalMonitoring();
   void showGraphsWindow();
+  void showCaptureWindow();
   void processSelectionChanged();
 
 private:
@@ -87,6 +89,7 @@ private:
 
   NeoQtRemoteDialog *m_remoteDialog;
   NeoQtGraphsWindow *m_graphsWindow;
+  NeoQtCaptureWindow *m_captureWindow;
 
   bool m_monitoring;
   bool m_viewingRemote;
