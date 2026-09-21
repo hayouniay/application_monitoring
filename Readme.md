@@ -152,6 +152,15 @@ The Qt app has its own native equivalent — see **Live Graphs** below — rathe
 
 Paused while viewing remote data (mirrors the process table); resumes when you go **Back to Local**.
 
+### Capture (Qt)
+
+**View → Capture...** is the Qt equivalent of the CLI's `--capture`: records CPU/Memory/Swap/I-O over a chosen duration (or until you click Stop), using the same four native wave graphs as Live Graphs — but with two key differences suited to a bounded, exportable session rather than an always-on rolling view:
+
+* **The X axis shows real wall-clock time** (`HH:mm:ss`) rather than elapsed seconds — so you can tell exactly *when* a spike happened, not just how long ago.
+* **No rolling cap** — the full session is kept (matching the CLI's behavior), so the exported report reflects everything captured, not just the last couple of minutes.
+
+Set **Duration** (seconds; `0` runs until you click **Stop**), click **Start Capture**, and watch the graphs build live. **Save Report...** exports the exact same CSV/HTML pair `--capture` produces on the CLI, via the shared backend — pick a base filename and both `.csv` and `.html` are written next to it. The **Show** dropdown offers the same all-graphs/one-graph toggle as Live Graphs.
+
 ### CLI Interactive Controls
 
 The terminal monitor provides interactive controls including:
@@ -203,6 +212,7 @@ The Qt application provides a graphical interface with:
 * Light/dark theme toggle, persisted between sessions
 * **Connect to Remote** dialog: SSH/Telnet monitoring and FTP/TFTP deploy, all four protocols in one place
 * **Live Graphs** window: native CPU/Memory/Swap/I-O line graphs, no browser or extra Qt module required
+* **Capture** window: bounded, exportable capture session with a real wall-clock X axis, mirroring `--capture`
 * A successful remote fetch replaces the table's contents with the card's process list; a **Back to Local** control (status bar) returns to live local monitoring
 
 The Qt interface uses the same C monitoring backend as the CLI. Remote network calls run on a background thread so the UI never blocks.
@@ -334,7 +344,8 @@ app_top_monitoring/
 │       ├── qt_remote_dialog.h
 │       ├── qt_theme.h
 │       ├── qt_wave_widget.h
-│       └── qt_graphs_window.h
+│       ├── qt_graphs_window.h
+│       └── qt_capture_window.h
 │
 ├── src/
 │   ├── monotoring_services.c
@@ -356,7 +367,8 @@ app_top_monitoring/
 │       ├── qt_remote_dialog.cpp
 │       ├── qt_theme.cpp
 │       ├── qt_wave_widget.cpp
-│       └── qt_graphs_window.cpp
+│       ├── qt_graphs_window.cpp
+│       └── qt_capture_window.cpp
 │
 └── ui/
     └── qt/

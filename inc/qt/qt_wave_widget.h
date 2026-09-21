@@ -2,6 +2,7 @@
 #define QT_WAVE_WIDGET_H
 
 #include <QColor>
+#include <QTime>
 #include <QVector>
 #include <QWidget>
 
@@ -30,6 +31,12 @@ public:
 
   void setMaxSamples(int maxSamples);
 
+  /*
+   * When enabled, the X axis shows real wall-clock time-of-day
+   * (HH:mm:ss) at each sample instead of no labels at all
+   */
+  void setShowTimeAxis(bool show);
+
 public slots:
   void addSample(double value, double secondValue = 0.0);
   void clear();
@@ -51,7 +58,9 @@ private:
 
   QVector<double> m_samples;
   QVector<double> m_samples2;
+  QVector<QTime> m_timestamps;
   int m_maxSamples;
+  bool m_showTimeAxis;
 
   bool m_fixedRange;
   double m_rangeMin;

@@ -44,6 +44,21 @@ void capture_series_free(NeoCaptureSeries *series);
 int capture_sample(NeoCaptureSeries *series, const NeoProcessList *list);
 
 /*
+ * Appends one sample built from already-computed values rather than
+ * reading /proc itself - used by the Qt "Capture" window, which
+ * already computes cpu/mem/swap/IO once per refresh tick for its live
+ * graphs and can hand those same numbers off for CSV/HTML export
+ * without a second /proc read. Shares the same series-growth logic
+ * (and start_time bookkeeping) as capture_sample().
+ *
+ * Returns 0 on success, -1 on failure.
+ */
+int capture_append_sample(NeoCaptureSeries *series, double cpu_percent,
+                          double mem_percent, double swap_percent,
+                          double io_read_mb_s, double io_write_mb_s,
+                          size_t process_count);
+
+/*
  * Writes the captured series as a CSV file.
  */
 int capture_write_csv(const NeoCaptureSeries *series, const char *path);

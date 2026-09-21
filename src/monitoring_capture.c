@@ -169,6 +169,30 @@ void capture_series_free(NeoCaptureSeries *series) {
   series->capacity = 0;
 }
 
+static int capture_series_add(NeoCaptureSeries *series,
+                              const NeoCaptureSample *sample) {
+
+  if (series->count >= series->capacity) {
+
+    const size_t new_capacity =
+        series->capacity == 0 ? INITIAL_CAPACITY : series->capacity * 2;
+
+    NeoCaptureSample *tmp = realloc(series->items, new_capacity * sizeof(*tmp));
+
+    if (tmp == NULL) {
+      return -1;
+    }
+
+    series->items = tmp;
+    series->capacity = new_capacity;
+  }
+
+  series->items[series->count] = *sample;
+  ++series->count;
+
+  return 0;
+}
+
 int capture_sample(NeoCaptureSeries *series, const NeoProcessList *list) {
   NeoCaptureSample sample;
   double mem_percent = 0.0;
@@ -206,25 +230,34 @@ int capture_sample(NeoCaptureSeries *series, const NeoProcessList *list) {
   sample.io_write_mb_s = write_rate;
   sample.process_count = list->count;
 
-  if (series->count >= series->capacity) {
+  return capture_series_add(series, &sample);
+}
 
-    const size_t new_capacity =
-        series->capacity == 0 ? INITIAL_CAPACITY : series->capacity * 2;
+int capture_append_sample(NeoCaptureSeries *series, double cpu_percent,
+                          double mem_percent, double swap_percent,
+                          double io_read_mb_s, double io_write_mb_s,
+                          size_t process_count) {
+  NeoCaptureSample sample;
 
-    NeoCaptureSample *tmp = realloc(series->items, new_capacity * sizeof(*tmp));
-
-    if (tmp == NULL) {
-      return -1;
-    }
-
-    series->items = tmp;
-    series->capacity = new_capacity;
+  if (series == NULL) {
+    return -1;
   }
 
-  series->items[series->count] = sample;
-  ++series->count;
+  memset(&sample, 0, sizeof(sample));
 
-  return 0;
+  if (series->count == 0) {
+    series->start_time = time(NULL);
+  }
+
+  sample.elapsed_seconds = difftime(time(NULL), series->start_time);
+  sample.cpu_percent = cpu_percent;
+  sample.mem_percent = mem_percent;
+  sample.swap_percent = swap_percent;
+  sample.io_read_mb_s = io_read_mb_s;
+  sample.io_write_mb_s = io_write_mb_s;
+  sample.process_count = process_count;
+
+  return capture_series_add(series, &sample);
 }
 
 /* ------------------------------------------------------------------------- */

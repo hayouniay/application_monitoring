@@ -96,6 +96,7 @@ if(BUILD_QT_APP)
         src/qt/qt_remote_dialog.cpp
         src/qt/qt_wave_widget.cpp
         src/qt/qt_graphs_window.cpp
+        src/qt/qt_capture_window.cpp
 
         inc/qt/qt_application.h
         inc/qt/qt_main_window.h
@@ -106,6 +107,7 @@ if(BUILD_QT_APP)
         inc/qt/qt_remote_dialog.h
         inc/qt/qt_wave_widget.h
         inc/qt/qt_graphs_window.h
+        inc/qt/qt_capture_window.h
 
         ui/qt/resources/monitoring.qrc
     )

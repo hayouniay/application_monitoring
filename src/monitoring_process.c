@@ -16,7 +16,7 @@
 /* Internal helpers                                                          */
 /* ------------------------------------------------------------------------- */
 
-static int read_file(const char *path, char *buffer, size_t size) {
+/*static int read_file(const char *path, char *buffer, size_t size) {
   int fd;
   ssize_t total;
 
@@ -40,7 +40,7 @@ static int read_file(const char *path, char *buffer, size_t size) {
   buffer[total] = '\0';
 
   return 0;
-}
+}*/
 
 int parse_pid_path(const char *name, pid_t *pid) {
   char *endptr;
