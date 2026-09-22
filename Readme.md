@@ -17,6 +17,18 @@ NEO Monitoring Services provides:
 * A reusable C monitoring backend shared by the CLI and Qt application.
 * A staged GitHub Actions pipeline for dependency checks, parallel CLI/Qt builds, and publishing.
 
+## Documentation
+
+This README covers installation, building, and everyday usage. For deeper reference material, see [`docs/`](docs/):
+
+| Document | Covers |
+| --- | --- |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module responsibilities, data flow, threading model, version management internals |
+| [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) | Every CLI flag, exhaustively, grouped by purpose |
+| [QT_GUI_GUIDE.md](docs/QT_GUI_GUIDE.md) | A walkthrough of every Qt window, menu, and dialog |
+| [REMOTE_TESTING.md](docs/REMOTE_TESTING.md) | Setting up local SSH/Telnet/FTP/TFTP test servers |
+| [CHANGELOG.md](docs/CHANGELOG.md) | Version history |
+
 ## Features
 
 ### Process Monitoring
@@ -78,7 +90,7 @@ NEO can reach a remote card in two ways:
 * **Monitor** a card's process list over **SSH** (key-based) or **Telnet** (scripted login), fetched in a single round trip alongside the card's total memory and CPU count.
 * **Deploy** the `app_top_monitoring` binary (or any file) to a card over **FTP** or **TFTP**, so it can then be monitored remotely.
 
-This works from both the CLI (`--protocol ssh|telnet|ftp|tftp`) and the Qt app (**Connect to Remote** dialog). See [`REMOTE_TESTING.md`](REMOTE_TESTING.md) for how to set up local test servers for each protocol without needing real hardware.
+This works from both the CLI (`--protocol ssh|telnet|ftp|tftp`) and the Qt app (**Connect to Remote** dialog). See [`docs/REMOTE_TESTING.md`](docs/REMOTE_TESTING.md) for how to set up local test servers for each protocol without needing real hardware.
 
 Remote monitoring runs on top of the same backend as local monitoring: the remote card runs its own `app_top_monitoring --csv --once`, and NEO parses the result, applies local filters/sorting, and displays it exactly like local data.
 
@@ -213,6 +225,7 @@ The Qt application provides a graphical interface with:
 * **Connect to Remote** dialog: SSH/Telnet monitoring and FTP/TFTP deploy, all four protocols in one place
 * **Live Graphs** window: native CPU/Memory/Swap/I-O line graphs, no browser or extra Qt module required
 * **Capture** window: bounded, exportable capture session with a real wall-clock X axis, mirroring `--capture`
+* **Help → About** dialog showing the current version
 * A successful remote fetch replaces the table's contents with the card's process list; a **Back to Local** control (status bar) returns to live local monitoring
 
 The Qt interface uses the same C monitoring backend as the CLI. Remote network calls run on a background thread so the UI never blocks.
@@ -312,7 +325,14 @@ app_top_monitoring/
 ├── CMakeLists.txt
 ├── Makefile
 ├── README.md
-├── REMOTE_TESTING.md
+├── VERSION
+│
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── CLI_REFERENCE.md
+│   ├── QT_GUI_GUIDE.md
+│   ├── CHANGELOG.md
+│   └── REMOTE_TESTING.md
 │
 ├── .github/
 │   └── workflows/
@@ -334,6 +354,7 @@ app_top_monitoring/
 │   ├── monitoring_output.h
 │   ├── monitoring_remote.h
 │   ├── monitoring_capture.h
+│   ├── monitoring_version.h.in
 │   │
 │   └── qt/
 │       ├── qt_application.h
@@ -410,7 +431,7 @@ Only needed if you use `--protocol ssh|telnet|ftp|tftp` or the Qt "Connect to Re
 sudo apt install openssh-client telnet curl tftp-hpa
 ```
 
-The remote card needs the matching **server**: `sshd`, `telnetd`, an FTP server (e.g. `vsftpd`), or a TFTP server (e.g. `tftpd-hpa`). See [`REMOTE_TESTING.md`](REMOTE_TESTING.md) to set these up locally for testing without real hardware.
+The remote card needs the matching **server**: `sshd`, `telnetd`, an FTP server (e.g. `vsftpd`), or a TFTP server (e.g. `tftpd-hpa`). See [`docs/REMOTE_TESTING.md`](docs/REMOTE_TESTING.md) to set these up locally for testing without real hardware.
 
 ## Building
 
@@ -584,7 +605,7 @@ Deploy the binary to a card over TFTP (no authentication):
     --local-file ./build/app_top_monitoring
 ```
 
-See [`REMOTE_TESTING.md`](REMOTE_TESTING.md) to try these against local test servers before pointing them at real hardware.
+See [`docs/REMOTE_TESTING.md`](docs/REMOTE_TESTING.md) to try these against local test servers before pointing them at real hardware.
 
 ## Design Goals
 
@@ -634,11 +655,15 @@ Qt
 
 ## Version
 
-Current project version:
+The `VERSION` file at the project root is the single source of truth — CMake reads it and bakes it into both binaries, so bumping a release is a one-line change to that one file. See [ARCHITECTURE.md](docs/ARCHITECTURE.md#version-management) for how it flows through the build.
+
+Current version:
 
 ```text
 1.0.0
 ```
+
+Check it at runtime: `app_top_monitoring --version` (CLI), or the title bar / **Help → About** (Qt).
 
 ## Development Status
 
@@ -663,6 +688,8 @@ The project currently contains:
 * Qt light/dark theming
 * Qt menus and desktop controls
 * Staged GitHub Actions CI/CD pipeline
+* Single-source-of-truth version management (`VERSION` file, displayed in both CLI and Qt)
+* Full documentation set under `docs/`
 
 The Qt interface is being developed incrementally on top of the existing C monitoring engine.
 

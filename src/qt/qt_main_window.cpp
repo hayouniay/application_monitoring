@@ -24,6 +24,7 @@ extern "C" {
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSizePolicy>
@@ -155,7 +156,7 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
 }
 
 void NeoQtMainWindow::setupUi() {
-  setWindowTitle(QStringLiteral("NEO Monitoring Services"));
+  setWindowTitle(baseWindowTitle());
 
   resize(1400, 850);
 
@@ -283,6 +284,14 @@ void NeoQtMainWindow::setupMenuBar() {
 
   connect(captureAction, &QAction::triggered, this,
           &NeoQtMainWindow::showCaptureWindow);
+
+  auto *helpMenu = menuBar()->addMenu(QStringLiteral("&Help"));
+
+  QAction *aboutAction =
+      helpMenu->addAction(QStringLiteral("About NEO Monitoring Services"));
+
+  connect(aboutAction, &QAction::triggered, this,
+          &NeoQtMainWindow::showAboutDialog);
 }
 
 void NeoQtMainWindow::setupStats() {
@@ -500,8 +509,8 @@ void NeoQtMainWindow::showRemoteProcesses(QVector<NeoProcess> processes,
 
   m_viewingRemote = true;
 
-  setWindowTitle(QStringLiteral("NEO Monitoring Services  —  Remote: %1")
-                     .arg(sourceLabel));
+  setWindowTitle(
+      QStringLiteral("%1  —  Remote: %2").arg(baseWindowTitle(), sourceLabel));
 
   statusBar()->showMessage(QStringLiteral("Showing %1 process(es) from %2")
                                .arg(processes.count())
@@ -517,7 +526,7 @@ void NeoQtMainWindow::backToLocalMonitoring() {
 
   m_viewingRemote = false;
 
-  setWindowTitle(QStringLiteral("NEO Monitoring Services"));
+  setWindowTitle(baseWindowTitle());
 
   m_backToLocalButton->setVisible(false);
   m_refreshButton->setEnabled(true);
@@ -618,4 +627,23 @@ void NeoQtMainWindow::updateThemeButtonLabel() {
     m_themeButton->setText(isDark ? QStringLiteral("\u2600  Light Mode")
                                   : QStringLiteral("\U0001F319  Dark Mode"));
   }
+}
+
+QString NeoQtMainWindow::baseWindowTitle() const {
+  return QStringLiteral("NEO Monitoring Services v%1")
+      .arg(qApp->applicationVersion());
+}
+
+void NeoQtMainWindow::showAboutDialog() {
+  QMessageBox::about(
+      this, QStringLiteral("About NEO Monitoring Services"),
+      QStringLiteral(
+          "<h3>NEO Monitoring Services</h3>"
+          "<p>Version %1</p>"
+          "<p>A top-like Linux process monitor with remote SSH/Telnet "
+          "monitoring, FTP/TFTP deployment, and live capture graphing, "
+          "sharing one C backend between the CLI and this Qt "
+          "application.</p>"
+          "<p>Built with Qt %2.</p>")
+          .arg(qApp->applicationVersion(), QString::fromLatin1(qVersion())));
 }

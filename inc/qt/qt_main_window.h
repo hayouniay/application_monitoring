@@ -42,6 +42,7 @@ private slots:
   void backToLocalMonitoring();
   void showGraphsWindow();
   void showCaptureWindow();
+  void showAboutDialog();
   void processSelectionChanged();
 
 private:
@@ -56,6 +57,7 @@ private:
   void updateStats();
   void updateDetails();
   void updateThemeButtonLabel();
+  QString baseWindowTitle() const;
 
   NeoQtProcessModel *m_processModel;
   NeoQtMonitorController *m_monitorController;

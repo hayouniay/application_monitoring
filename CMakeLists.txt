@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.16)
 
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" NEO_VERSION_STRING LIMIT_COUNT 1)
+string(STRIP "${NEO_VERSION_STRING}" NEO_VERSION_STRING)
+
 project(
     app_top_monitoring
-    VERSION 1.0.0
+    VERSION ${NEO_VERSION_STRING}
     DESCRIPTION "A top-like Linux process monitor"
     LANGUAGES C CXX
 )
@@ -36,6 +39,12 @@ set(CORE_SOURCES
     src/monitoring_capture.c
 )
 
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/monitoring_version.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/monitoring_version.h
+    @ONLY
+)
+
 add_library(
     monitoring_core
     STATIC
@@ -46,6 +55,7 @@ target_include_directories(
     monitoring_core
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/inc
+        ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
 
 target_compile_options(
