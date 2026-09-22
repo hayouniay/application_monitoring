@@ -13,7 +13,13 @@
 /* Version / global limits                                                   */
 /* ------------------------------------------------------------------------- */
 
-#define VERSION "1.0.0"
+#include "monitoring_version.h"
+
+/* VERSION is kept as an alias so existing call sites (output headers,
+ * Qt's setApplicationVersion(), etc.) don't need to change; the VERSION
+ * file at the project root is the actual single source of truth - see
+ * inc/monitoring_version.h.in and CMakeLists.txt. */
+#define VERSION NEO_VERSION
 
 #define DEFAULT_INTERVAL 2.0
 #define MIN_INTERVAL 0.1
