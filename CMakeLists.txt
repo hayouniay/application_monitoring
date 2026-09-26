@@ -18,11 +18,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTORCC ON)
-
 option(BUILD_QT_APP "Build the Qt GUI application" ON)
+option(BUILD_TESTS "Build unit tests for monitoring_core" ON)
 
 find_package(Threads REQUIRED)
 
@@ -163,6 +160,19 @@ if(BUILD_QT_APP)
             Qt6::Widgets
             Threads::Threads
     )
+
+    set_target_properties(
+        app_top_monitoring_qt
+        PROPERTIES
+            AUTOMOC ON
+            AUTOUIC ON
+            AUTORCC ON
+    )
+endif()
+
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
 endif()
 
 install(
