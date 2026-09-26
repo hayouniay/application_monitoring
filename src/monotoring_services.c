@@ -1,11 +1,14 @@
 #define _GNU_SOURCE
 
+#include "monitoring_alert.h"
 #include "monitoring_capture.h"
+#include "monitoring_log.h"
 #include "monitoring_output.h"
 #include "monitoring_remote.h"
 #include "monitoring_services.h"
 #include "monitoring_ui.h"
 
+#include <errno.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -150,6 +153,11 @@ static int run_remote_monitor(NeoConfig *config) {
 
   process_list_init(&list);
 
+  log_write(NEO_LOG_INFO, "Starting remote monitoring via %s: %s%s%s",
+           config->protocol == PROTOCOL_SSH ? "SSH" : "Telnet",
+           target.user[0] ? target.user : "", target.user[0] ? "@" : "",
+           target.host);
+
   while (running) {
 
     int result;
@@ -165,6 +173,9 @@ static int run_remote_monitor(NeoConfig *config) {
     if (result != 0) {
 
       fprintf(stderr, "monitoring_services: %s\n", message);
+
+      log_write(NEO_LOG_ERROR, "Remote monitoring connection failed: %s",
+               message);
 
       process_list_free(&list);
 
@@ -228,6 +239,10 @@ static int run_deploy(NeoConfig *config) {
          config->remote_host,
          config->protocol == PROTOCOL_FTP ? "FTP" : "TFTP");
 
+  log_write(NEO_LOG_INFO, "Deploying %s to %s via %s", config->local_file,
+           config->remote_host,
+           config->protocol == PROTOCOL_FTP ? "FTP" : "TFTP");
+
   if (config->protocol == PROTOCOL_FTP) {
 
     NeoFtpTarget target;
@@ -238,6 +253,8 @@ static int run_deploy(NeoConfig *config) {
                           sizeof(message)) != 0) {
 
       fprintf(stderr, "monitoring_services: %s\n", message);
+
+      log_write(NEO_LOG_ERROR, "FTP deploy failed: %s", message);
 
       return EXIT_FAILURE;
     }
@@ -253,11 +270,15 @@ static int run_deploy(NeoConfig *config) {
 
       fprintf(stderr, "monitoring_services: %s\n", message);
 
+      log_write(NEO_LOG_ERROR, "TFTP deploy failed: %s", message);
+
       return EXIT_FAILURE;
     }
   }
 
   printf("Deploy finished successfully.\n");
+
+  log_write(NEO_LOG_INFO, "Deploy finished successfully");
 
   return EXIT_SUCCESS;
 }
@@ -272,6 +293,11 @@ static int run_local_monitor(NeoConfig *config) {
   NeoProcessList process_list;
   NeoPreviousList previous_list;
 
+  NeoAlertState alert_state;
+  bool alert_ever_fired = false;
+  const bool alerting_enabled =
+      config->alert_cpu_percent > 0.0 || config->alert_mem_percent > 0.0;
+
   int interactive = 0;
   int ui_initialized = 0;
 
@@ -279,6 +305,8 @@ static int run_local_monitor(NeoConfig *config) {
 
   process_list_init(&process_list);
   previous_list_init(&previous_list);
+
+  alert_state_init(&alert_state);
 
   interactive =
       ui_is_interactive() && !config->batch && !config->csv && !config->json;
@@ -309,6 +337,9 @@ static int run_local_monitor(NeoConfig *config) {
       fprintf(stderr, "monitoring_services: "
                       "failed to read system information\n");
 
+      log_write(NEO_LOG_ERROR, "Refresh failed: unable to read system "
+                              "information");
+
       break;
     }
 
@@ -318,10 +349,29 @@ static int run_local_monitor(NeoConfig *config) {
       fprintf(stderr, "monitoring_services: "
                       "failed to scan /proc\n");
 
+      log_write(NEO_LOG_ERROR, "Refresh failed: unable to scan /proc");
+
       break;
     }
 
     sort_processes(&process_list, config->sort_mode, config->reverse);
+
+    if (alerting_enabled) {
+
+      double cpu_percent = 0.0;
+      double mem_percent = 0.0;
+      double swap_percent = 0.0;
+
+      capture_read_system(&cpu_percent, &mem_percent, &swap_percent);
+
+      const int fired =
+          alert_evaluate(config, &alert_state, cpu_percent, mem_percent);
+
+      if (fired != 0) {
+        alert_ever_fired = true;
+        alert_dispatch(config, fired, cpu_percent, mem_percent);
+      }
+    }
 
     if (config->json) {
 
@@ -343,11 +393,32 @@ static int run_local_monitor(NeoConfig *config) {
     }
 
     if (config->once) {
-      break;
+
+      const int exit_code = alert_ever_fired
+                                ? NEO_EXIT_ALERT
+                                : EXIT_SUCCESS;
+
+      process_list_free(&process_list);
+      previous_list_free(&previous_list);
+
+      if (ui_initialized) {
+        ui_restore();
+        putchar('\n');
+      }
+
+      return exit_code;
     }
 
     if (config->batch && !interactive) {
-      break;
+
+      const int exit_code = alert_ever_fired
+                                ? NEO_EXIT_ALERT
+                                : EXIT_SUCCESS;
+
+      process_list_free(&process_list);
+      previous_list_free(&previous_list);
+
+      return exit_code;
     }
 
     if (interactive) {
@@ -388,7 +459,7 @@ static int run_local_monitor(NeoConfig *config) {
 
   previous_list_free(&previous_list);
 
-  return running ? EXIT_SUCCESS : EXIT_SUCCESS;
+  return alert_ever_fired ? NEO_EXIT_ALERT : EXIT_SUCCESS;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -414,8 +485,13 @@ static int run_capture_mode(NeoConfig *config) {
   if (config->capture_duration_seconds > 0.0) {
     printf("Capturing for %.0f second(s)...\n",
            config->capture_duration_seconds);
+
+    log_write(NEO_LOG_INFO, "Capture started (duration=%.0fs)",
+             config->capture_duration_seconds);
   } else {
     printf("Capturing... press Ctrl+C to stop.\n");
+
+    log_write(NEO_LOG_INFO, "Capture started (until Ctrl+C)");
   }
 
   while (running) {
@@ -424,6 +500,9 @@ static int run_capture_mode(NeoConfig *config) {
 
       fprintf(stderr, "monitoring_services: "
                       "failed to read system information\n");
+
+      log_write(NEO_LOG_ERROR,
+               "Capture failed: unable to read system information");
       break;
     }
 
@@ -432,6 +511,8 @@ static int run_capture_mode(NeoConfig *config) {
 
       fprintf(stderr, "monitoring_services: "
                       "failed to scan /proc\n");
+
+      log_write(NEO_LOG_ERROR, "Capture failed: unable to scan /proc");
       break;
     }
 
@@ -459,6 +540,9 @@ static int run_capture_mode(NeoConfig *config) {
   }
 
   putchar('\n');
+
+  log_write(NEO_LOG_INFO, "Capture stopped: %zu sample(s) captured",
+           series.count);
 
   if (series.count == 0) {
 
@@ -519,11 +603,23 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
+  if (log_init(config.log_file[0] ? config.log_file : NULL,
+              (NeoLogLevel)config.log_level) != 0) {
+
+    fprintf(stderr,
+            "monitoring_services: failed to open log file '%s': %s\n",
+            config.log_file, strerror(errno));
+
+    config_free(&config);
+    return EXIT_FAILURE;
+  }
+
   if (install_signals() != 0) {
 
     fprintf(stderr, "monitoring_services: "
                     "failed to install signal handlers\n");
 
+    log_shutdown();
     config_free(&config);
     return EXIT_FAILURE;
   }
@@ -533,6 +629,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "monitoring_services: --capture currently only "
                     "supports local monitoring (not with --protocol)\n");
 
+    log_shutdown();
     config_free(&config);
     return EXIT_FAILURE;
   }
@@ -556,6 +653,7 @@ int main(int argc, char **argv) {
     break;
   }
 
+  log_shutdown();
   config_free(&config);
 
   return result;

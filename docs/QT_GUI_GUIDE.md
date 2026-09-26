@@ -21,8 +21,12 @@ The main window shows the live local process table, refreshing on a timer (defau
 **Status bar:** shows the last refresh time normally; while viewing remote data, shows a **Back to Local** button instead (see below) — deliberately placed in the status bar rather than the toolbar, since a toolbar with too many buttons can silently push extras into an overflow area where they become unclickable.
 
 **Menu bar:**
-- **View** → Live Graphs..., Capture...
+- **View** → Live Graphs..., Capture..., Logs..., Alert Thresholds...
 - **Help** → About NEO Monitoring Services
+
+**Process table:** right-click a row for a context menu with **Send SIGTERM**, **Send SIGKILL** (both ask for confirmation first) and **Renice...** (prompts for a new niceness, -20 to 19). Local processes only — while viewing a remote host's table (see [Connect to Remote](#connect-to-remote-dialog)), the menu shows a single disabled entry instead, since acting on a process over a remote monitoring connection is a different trust decision than merely observing it.
+
+**System tray:** if a tray is available, the app adds an icon showing a live CPU/Memory tooltip. Closing the main window (or minimizing it) hides it to the tray instead of exiting; use the tray icon's **Show/Hide** or double/single-click to bring it back, and **Quit** from the tray menu to actually exit. Useful if you leave the app running in the background continuously.
 
 ## Settings dialog
 
@@ -51,6 +55,26 @@ See [REMOTE_TESTING.md](REMOTE_TESTING.md) for setting up local test servers to 
 - Paused while viewing remote data; resumes with **Back to Local**.
 
 No export from this window — it's a live view, not a saved session. For that, use Capture.
+
+## Logs
+
+**View → Logs...** shows the same log stream the CLI writes to `--log-file` (refresh errors, remote connection attempts/failures, capture start/stop, process actions, alert firings), live, inside the Qt app — including messages produced by background threads such as the SSH/FTP/TFTP work in the Connect to Remote dialog, which would otherwise only be visible in that dialog's own log pane while it happens to be open.
+
+- A **minimum level** dropdown filters what's shown (the full history is kept regardless, so raising the filter never loses anything).
+- **Auto-scroll** keeps the newest entry in view; uncheck it to read back through history without it jumping.
+- **Clear** empties this window's view (does not touch `--log-file`, if one is configured).
+- The window can be closed and reopened freely — messages logged while it's closed are not lost, and are replayed on reopen.
+
+## Alert Thresholds
+
+**View → Alert Thresholds...** configures the same sustained CPU%/memory% threshold alerting as the CLI's `--alert-*` flags, evaluated against the local machine every refresh regardless of which process list (local or remote) is currently displayed:
+
+- **CPU threshold** / **Memory threshold** (percent; `0`/"Off" disables that check).
+- **Must persist for** (seconds) — a threshold has to stay exceeded for this long before it fires, so a brief spike doesn't trigger anything.
+- **Desktop notification** shows a system tray balloon when an alert fires (requires the [system tray icon](#main-window) to be available).
+- **Webhook URL** (optional) POSTs a small JSON payload when an alert fires, fired off in the background so a slow endpoint never blocks the UI.
+
+Changing any of these resets the sustained-breach tracking, so a new configuration always starts from a clean slate.
 
 ## Capture
 
