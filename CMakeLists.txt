@@ -24,24 +24,36 @@ set(CMAKE_AUTORCC ON)
 
 option(BUILD_QT_APP "Build the Qt GUI application" ON)
 
+find_package(Threads REQUIRED)
+
 if(BUILD_QT_APP)
     find_package(Qt6 REQUIRED COMPONENTS Widgets)
-    find_package(Threads REQUIRED)
 endif()
 
 set(CORE_SOURCES
     src/monitoring_services_core.c
     src/monitoring_process.c
+    src/monitoring_process_control.c
     src/monitoring_metrics.c
     src/monitoring_filter.c
     src/monitoring_output.c
     src/monitoring_remote.c
     src/monitoring_capture.c
+    src/monitoring_log.c
+    src/monitoring_alert.c
 )
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/inc/monitoring_version.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/generated/monitoring_version.h
+    @ONLY
+)
+
+string(TIMESTAMP NEO_MAN_DATE "%Y-%m-%d" UTC)
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/docs/app_top_monitoring.1.in
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/app_top_monitoring.1
     @ONLY
 )
 
@@ -64,6 +76,12 @@ target_compile_options(
         -Wall
         -Wextra
         -Wpedantic
+)
+
+target_link_libraries(
+    monitoring_core
+    PUBLIC
+        Threads::Threads
 )
 
 add_executable(
@@ -107,6 +125,7 @@ if(BUILD_QT_APP)
         src/qt/qt_wave_widget.cpp
         src/qt/qt_graphs_window.cpp
         src/qt/qt_capture_window.cpp
+        src/qt/qt_log_window.cpp
 
         inc/qt/qt_application.h
         inc/qt/qt_main_window.h
@@ -118,6 +137,7 @@ if(BUILD_QT_APP)
         inc/qt/qt_wave_widget.h
         inc/qt/qt_graphs_window.h
         inc/qt/qt_capture_window.h
+        inc/qt/qt_log_window.h
 
         ui/qt/resources/monitoring.qrc
     )
@@ -156,5 +176,42 @@ if(BUILD_QT_APP)
         TARGETS
             app_top_monitoring_qt
         RUNTIME DESTINATION bin
+    )
+endif()
+
+# ---------------------------------------------------------------------------
+# Man page: docs/app_top_monitoring.1.in is configured above (version/date
+# filled in, same pattern as monitoring_version.h.in) into the build tree.
+# Compress it with gzip if available, since that's what most distros expect
+# man pages to be, but fall back to installing it uncompressed - either way
+# `man app_top_monitoring` works after `make install`.
+# ---------------------------------------------------------------------------
+
+find_program(GZIP_EXECUTABLE gzip)
+
+if(GZIP_EXECUTABLE)
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/app_top_monitoring.1.gz
+        COMMAND ${GZIP_EXECUTABLE} -9 -n -c
+            ${CMAKE_CURRENT_BINARY_DIR}/generated/app_top_monitoring.1
+            > ${CMAKE_CURRENT_BINARY_DIR}/generated/app_top_monitoring.1.gz
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/generated/app_top_monitoring.1
+        COMMENT "Compressing man page"
+        VERBATIM
+    )
+
+    add_custom_target(
+        man_page ALL
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/generated/app_top_monitoring.1.gz
+    )
+
+    install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/app_top_monitoring.1.gz
+        DESTINATION share/man/man1
+    )
+else()
+    install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/app_top_monitoring.1
+        DESTINATION share/man/man1
     )
 endif()

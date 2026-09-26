@@ -96,3 +96,29 @@ Writes `PATH.csv` (raw samples: `elapsed_seconds,cpu_percent,mem_percent,swap_pe
 Metrics are system-wide (CPU/memory/swap read directly from `/proc/stat`/`/proc/meminfo`, independent of per-process figures) plus the aggregate I/O rate and count of whatever processes match the active filters at that sample. The very first sample always reports `0.0` for CPU%, since it needs a delta between two readings.
 
 The Qt app has a native equivalent (**View → Capture...**) that doesn't need a browser — see the [Qt GUI Guide](QT_GUI_GUIDE.md#capture).
+
+## Logging
+
+| Flag | Argument | Description |
+| --- | --- | --- |
+| `--log-file` | path | Append timestamped log entries to this file. Default: disabled (nothing is written; behavior is unchanged from before this flag existed). |
+| `--log-level` | `error`\|`warn`\|`info`\|`debug` | Minimum severity recorded (default `info`). |
+
+Everything still goes to stdout/stderr as before — `--log-file` is additive, for post-mortem debugging, and records: refresh errors, remote connection attempts/failures (SSH/Telnet/FTP/TFTP), and capture start/stop. Each line is `[YYYY-MM-DD HH:MM:SS] [LEVEL] message`.
+
+The Qt app has a native equivalent (**View → Logs...**) showing the same live stream in-process, including messages from background SSH/FTP/TFTP threads that would otherwise only appear in the remote dialog's own log box while it happens to be open — see the [Qt GUI Guide](QT_GUI_GUIDE.md).
+
+## Threshold alerting
+
+| Flag | Argument | Description |
+| --- | --- | --- |
+| `--alert-cpu` | percent | Alert when system-wide CPU% stays above this value. Unset/`0` = disabled. |
+| `--alert-mem` | percent | Alert when system-wide memory% stays above this value. Unset/`0` = disabled. |
+| `--alert-duration` | seconds | How long a threshold must be continuously exceeded before it fires (default `5`) — avoids alerting on a brief spike. |
+| `--alert-notify` | | Send a desktop notification (via `notify-send`, if installed) when an alert fires. |
+| `--alert-webhook` | URL | POST a small JSON payload (`{"alert":"cpu","value":...,"threshold":...,"sustained_seconds":...,"timestamp":...}`) to this URL (via `curl`, if installed) when an alert fires. |
+
+In `--once`/`--batch`/`--csv`/`--json` modes (and in the continuous mode's normal Ctrl+C exit), the process exits with code **2** instead of 0 if any alert fired during the run — useful for scripts and process supervisors without having to scrape output. Alert conditions are logged (see [Logging](#logging) above) regardless of whether `--log-file` is set.
+
+The Qt app has a native equivalent (**View → Alert Thresholds...**), dispatching via a system tray notification and/or webhook instead of `notify-send`/exit code.
+

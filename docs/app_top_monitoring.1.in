@@ -1,0 +1,283 @@
+'\" t
+.TH APP_TOP_MONITORING 1 "@NEO_MAN_DATE@" "app_top_monitoring @PROJECT_VERSION@" "User Commands"
+.SH NAME
+app_top_monitoring \- a top\-like Linux process monitor with remote monitoring, deployment, capture, logging and alerting
+.SH SYNOPSIS
+.B app_top_monitoring
+[\fIOPTIONS\fR] [\fIPATTERN\fR]
+.SH DESCRIPTION
+.B app_top_monitoring
+displays live process information from
+.I /proc
+in a
+.BR top (1)-like
+table, sortable and filterable, with three extra capabilities beyond a
+typical process monitor: it can attach to a
+.B remote
+host over SSH or Telnet and display
+.I that
+host's processes instead (or deploy itself there first over FTP/TFTP), it
+can
+.B capture
+a timed series of system\-wide samples to a CSV file and an interactive
+HTML chart report, and it can watch CPU/memory usage for a
+.B sustained
+threshold breach and raise an alert.
+.PP
+A bare positional
+.I PATTERN
+argument is shorthand for an include filter: it is matched against each
+process's command name and full command line (case\-insensitive
+substring).
+.PP
+A separate Qt GUI application,
+.BR app_top_monitoring_qt (1),
+shares this same backend and adds live graphs, a native capture viewer,
+a system tray icon, and point\-and\-click process actions.
+.SH OPTIONS
+.SS Display and refresh
+.TP
+.BR \-i ", " \-\-interval " " \fISECONDS\fR
+Refresh interval (default 2.0). Also the per\-sample interval for
+.BR \-\-capture .
+.TP
+.BR \-l ", " \-\-long\-args
+Show the full command line instead of just the command name.
+.TP
+.B \-\-swap
+Show the swap column.
+.TP
+.B \-\-io
+Show I/O read/write rate columns.
+.TP
+.B \-\-threads
+Show the thread\-count column.
+.TP
+.B \-\-start\-time
+Show each process's start time.
+.TP
+.B \-\-elapsed
+Show each process's elapsed runtime.
+.TP
+.BR \-R ", " \-\-reverse
+Reverse the current sort order.
+.TP
+.BR \-n ", " \-\-limit " " \fICOUNT\fR
+Only display the first N processes after sorting (0 = unlimited).
+.SS Filtering
+.TP
+.BR \-x ", " \-\-exclude " " \fIPATTERN\fR
+Exclude processes whose command name or command line contains
+.I PATTERN
+(case\-insensitive substring). Exclusions take priority over include
+patterns.
+.TP
+.BR \-p ", " \-\-pid " " \fIPID\fR[,\fIPID\fR...]
+Only show these PIDs.
+.TP
+.BR \-P ", " \-\-ppid " " \fIPPID\fR[,\fIPPID\fR...]
+Only show children of these PPIDs.
+.TP
+.BR \-u ", " \-\-user " " \fIUSER\fR
+Local mode: filter to this user's processes. Remote mode: the login
+username instead.
+.TP
+.BR \-s ", " \-\-state " " \fISTATES\fR
+Only show processes in these states, e.g.
+.IR R,S,D,T,Z,I .
+.TP
+.B \-\-cpu\-threshold \fIPERCENT\fR
+Hide processes below this CPU%.
+.TP
+.B \-\-ram\-mb \fIMB\fR
+Hide processes below this RSS.
+.TP
+.B \-\-ram\-percent \fIPERCENT\fR
+Hide processes below this memory%.
+.SS Sorting
+.TP
+.B \-\-sort \fIMODE\fR
+One of
+.BR cpu ", " mem ", " pid ", " rss ", " io_read ", " io_write
+(default
+.BR cpu ).
+.SS Execution mode
+.TP
+.BR \-1 ", " \-\-once
+Run a single scan and exit.
+.TP
+.BR \-b ", " \-\-batch
+Non\-interactive batch mode (also implied by \-\-csv/\-\-json).
+.TP
+.B \-\-csv
+CSV output instead of the interactive table.
+.TP
+.B \-\-json
+JSON output instead of the interactive table.
+.TP
+.B \-\-no\-color
+Disable terminal colors.
+.TP
+.BR \-h ", " \-\-help
+Show usage and exit.
+.TP
+.BR \-V ", " \-\-version
+Show the version and exit.
+.SS Remote connectivity (SSH/Telnet/FTP/TFTP)
+.TP
+.B \-\-protocol \fIPROTOCOL\fR
+One of
+.BR local ", " ssh ", " telnet ", " ftp ", " tftp
+(default
+.BR local ).
+.TP
+.B \-\-host \fIADDRESS\fR
+Remote host address. Required for any non\-local protocol.
+.TP
+.B \-\-password \fIPASSWORD\fR
+Login password (telnet/ftp only; ssh uses key\-based auth exclusively).
+.TP
+.B \-\-port \fINUMBER\fR
+Override the protocol's default port (22 ssh, 23 telnet, 21 ftp, 69
+tftp).
+.TP
+.B \-\-identity \fIPATH\fR
+SSH private key (optional; ssh only).
+.TP
+.B \-\-remote\-bin \fINAME\fR
+Name or path of
+.B app_top_monitoring
+on the remote host (ssh/telnet monitoring).
+.TP
+.B \-\-local\-file \fIPATH\fR
+File to upload (ftp/tftp deploy).
+.TP
+.B \-\-remote\-file \fINAME\fR
+Destination filename on the remote host (ftp/tftp deploy; defaults to
+the local filename).
+.PP
+.B \-\-capture
+combined with a non\-local
+.B \-\-protocol
+is rejected with an error.
+.SS Capture (time\-series + chart report)
+.TP
+.B \-\-capture
+Capture until Ctrl+C.
+.TP
+.B \-\-capture=\fISECONDS\fR
+Capture for
+.I SECONDS
+then stop automatically. Note the
+.BR = ;
+.B \-\-capture 30
+does not work as a duration.
+.TP
+.B \-\-capture\-output \fIBASEPATH\fR
+Base path for the two output files (no extension); default
+.IR capture_<unix\-timestamp> .
+.SS Logging
+.TP
+.B \-\-log\-file \fIPATH\fR
+Append timestamped log entries to
+.IR PATH .
+Disabled by default; stdout/stderr behave exactly as before. Records
+refresh errors, remote connection attempts/failures, and capture
+start/stop, formatted as
+.IR "[YYYY-MM-DD HH:MM:SS] [LEVEL] message" .
+.TP
+.B \-\-log\-level \fILEVEL\fR
+Minimum severity recorded: one of
+.BR error ", " warn ", " info ", " debug
+(default
+.BR info ).
+.SS Threshold alerting
+.TP
+.B \-\-alert\-cpu \fIPERCENT\fR
+Alert when system\-wide CPU% stays above this value. Unset/0 disables
+this check.
+.TP
+.B \-\-alert\-mem \fIPERCENT\fR
+Alert when system\-wide memory% stays above this value. Unset/0
+disables this check.
+.TP
+.B \-\-alert\-duration \fISECONDS\fR
+How long a threshold must be continuously exceeded before it fires
+(default 5).
+.TP
+.B \-\-alert\-notify
+Send a desktop notification via
+.BR notify-send (1)
+(if installed) when an alert fires.
+.TP
+.B \-\-alert\-webhook \fIURL\fR
+POST a small JSON payload to
+.I URL
+via
+.BR curl (1)
+(if installed) when an alert fires.
+.SH INTERACTIVE KEYS
+Available in the default interactive table mode (not
+\-\-once/\-\-batch/\-\-csv/\-\-json):
+.TS
+tab(:);
+l l.
+q:Quit
+c:Sort by CPU
+m:Sort by memory
+p:Sort by PID
++:Increase refresh interval
+\-:Decrease refresh interval
+r:Force refresh
+v:Reverse sort order
+.TE
+.SH EXIT STATUS
+.TP
+.B 0
+Success, and (when alerting is configured) no alert fired during the
+run.
+.TP
+.B 1
+A fatal error occurred (bad arguments, failed to read
+.IR /proc ,
+remote connection failure, deploy failure, and similar).
+.TP
+.B 2
+Success, but a
+\-\-alert\-cpu/\-\-alert\-mem
+threshold fired (or was still active) at exit \- see
+.B Threshold alerting
+above. Only meaningful when alerting is configured; otherwise this
+exit status is not used.
+.SH EXAMPLES
+.TP
+Watch local processes, sorted by memory:
+.B app_top_monitoring \-\-sort mem
+.TP
+One JSON snapshot for scripting:
+.B app_top_monitoring \-\-once \-\-json
+.TP
+Monitor a remote card over SSH:
+.B app_top_monitoring \-\-protocol ssh \-\-host 10.0.0.5 \-u admin
+.TP
+Capture 60 seconds of system load with post\-mortem logging:
+.B app_top_monitoring \-\-capture=60 \-\-log\-file /var/log/app_top_monitoring.log
+.TP
+Alert if CPU stays above 90% for a minute, notifying and exiting 2:
+.B app_top_monitoring \-\-alert\-cpu 90 \-\-alert\-duration 60 \-\-alert\-notify
+.SH FILES
+.TP
+.I VERSION
+Single source of truth for the version reported by \-\-version and this
+manual page.
+.SH SEE ALSO
+.BR top (1),
+.BR ps (1),
+.BR notify-send (1),
+.BR curl (1)
+.PP
+Full documentation, including the Qt GUI guide and remote\-testing
+setup, ships alongside the source in
+.IR docs/ .
+.SH AUTHOR
+See the project's README and CONTRIBUTING documentation.

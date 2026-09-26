@@ -242,6 +242,41 @@ typedef struct {
    * automatic timestamped name in the current directory. */
   char capture_output[MAX_REMOTE_PATH];
 
+  /* --------------------------------------------------------------------- */
+  /* Logging (--log-file PATH, --log-level LEVEL)                          */
+  /* --------------------------------------------------------------------- */
+
+  /* Empty = file logging disabled (the default: everything still goes
+   * to stdout/stderr as before). */
+  char log_file[MAX_REMOTE_PATH];
+
+  /* Minimum severity written to the log file / delivered to sinks.
+   * Declared as int here (rather than including monitoring_log.h, to
+   * keep this header's dependency footprint small) but always holds a
+   * valid NeoLogLevel value. */
+  int log_level;
+
+  /* --------------------------------------------------------------------- */
+  /* Threshold alerting (--alert-cpu, --alert-mem, --alert-duration,       */
+  /* --alert-notify, --alert-webhook)                                     */
+  /* --------------------------------------------------------------------- */
+
+  /* System-wide CPU%/memory% thresholds; <= 0 disables that check. */
+  double alert_cpu_percent;
+  double alert_mem_percent;
+
+  /* How long (seconds) a threshold must be continuously exceeded
+   * before an alert fires - avoids firing on a brief spike. */
+  double alert_sustain_seconds;
+
+  /* Fire a desktop notification (via `notify-send`) when an alert
+   * fires. */
+  bool alert_notify;
+
+  /* HTTP(S) URL to POST a small JSON payload to when an alert fires;
+   * empty = disabled. */
+  char alert_webhook[MAX_REMOTE_PATH];
+
 } NeoConfig;
 
 /* ------------------------------------------------------------------------- */

@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 
 #include "monitoring_filter.h"
+#include "monitoring_log.h"
 #include "monitoring_metrics.h"
 #include "monitoring_process.h"
 #include "monitoring_services.h"
@@ -290,6 +291,15 @@ void config_init(NeoConfig *config) {
   config->capture_enabled = false;
   config->capture_duration_seconds = 0.0;
   config->capture_output[0] = '\0';
+
+  config->log_file[0] = '\0';
+  config->log_level = (int)NEO_LOG_INFO;
+
+  config->alert_cpu_percent = 0.0;
+  config->alert_mem_percent = 0.0;
+  config->alert_sustain_seconds = 5.0;
+  config->alert_notify = false;
+  config->alert_webhook[0] = '\0';
 }
 
 /* ------------------------------------------------------------------------- */
@@ -568,6 +578,23 @@ void print_usage(const char *program) {
          "  with a dropdown to show all graphs or isolate one). Currently\n"
          "  local monitoring only (not combined with --protocol).\n"
          "\n"
+         "Logging:\n"
+         "      --log-file PATH     Append timestamped log entries to PATH\n"
+         "      --log-level LEVEL  error|warn|info|debug (default info)\n"
+         "\n"
+         "Threshold alerting (system-wide CPU/memory):\n"
+         "      --alert-cpu N       Alert when CPU%% stays above N\n"
+         "      --alert-mem N       Alert when memory%% stays above N\n"
+         "      --alert-duration S  Seconds a breach must persist first "
+         "(default 5)\n"
+         "      --alert-notify      Send a desktop notification "
+         "(notify-send)\n"
+         "      --alert-webhook URL POST a JSON payload to URL when an "
+         "alert fires\n"
+         "\n"
+         "  In --once/--batch/--csv/--json modes, exiting with an alert\n"
+         "  condition still active uses exit code 2 instead of 0.\n"
+         "\n"
          "Interactive keys:\n"
          "  q  quit\n"
          "  c  sort CPU\n"
@@ -631,6 +658,15 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
 
       {"capture", optional_argument, 0, 3000},
       {"capture-output", required_argument, 0, 3001},
+
+      {"log-file", required_argument, 0, 4000},
+      {"log-level", required_argument, 0, 4001},
+
+      {"alert-cpu", required_argument, 0, 4100},
+      {"alert-mem", required_argument, 0, 4101},
+      {"alert-duration", required_argument, 0, 4102},
+      {"alert-notify", no_argument, 0, 4103},
+      {"alert-webhook", required_argument, 0, 4104},
 
       {"help", no_argument, 0, 'h'},
       {"version", no_argument, 0, 'V'},
@@ -905,6 +941,51 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
 
     case 3001:
       snprintf(config->capture_output, sizeof(config->capture_output), "%s",
+               optarg);
+      break;
+
+    case 4000:
+      snprintf(config->log_file, sizeof(config->log_file), "%s", optarg);
+      break;
+
+    case 4001: {
+      NeoLogLevel level;
+
+      if (log_level_parse(optarg, &level) != 0) {
+        fprintf(stderr,
+                "Invalid --log-level: %s (expected error, warn, info or "
+                "debug)\n",
+                optarg);
+        return -1;
+      }
+
+      config->log_level = (int)level;
+      break;
+    }
+
+    case 4100:
+      config->alert_cpu_percent = strtod(optarg, NULL);
+      break;
+
+    case 4101:
+      config->alert_mem_percent = strtod(optarg, NULL);
+      break;
+
+    case 4102:
+      config->alert_sustain_seconds = strtod(optarg, NULL);
+
+      if (config->alert_sustain_seconds < 0.0) {
+        fprintf(stderr, "Invalid --alert-duration: %s\n", optarg);
+        return -1;
+      }
+      break;
+
+    case 4103:
+      config->alert_notify = true;
+      break;
+
+    case 4104:
+      snprintf(config->alert_webhook, sizeof(config->alert_webhook), "%s",
                optarg);
       break;
 
