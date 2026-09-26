@@ -172,8 +172,7 @@ void NeoQtLogWindow::setupUi() {
   connect(m_levelFilter, QOverload<int>::of(&QComboBox::currentIndexChanged),
           this, &NeoQtLogWindow::filterChanged);
 
-  connect(clearButton, &QPushButton::clicked, this,
-          &NeoQtLogWindow::clearView);
+  connect(clearButton, &QPushButton::clicked, this, &NeoQtLogWindow::clearView);
 }
 
 bool NeoQtLogWindow::passesFilter(NeoLogLevel level) const {

@@ -149,8 +149,8 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
 
               if (fired & NEO_ALERT_CPU) {
                 message = QStringLiteral("CPU usage %1% has stayed above %2%")
-                             .arg(cpuPercent, 0, 'f', 1)
-                             .arg(m_alertConfig.alert_cpu_percent, 0, 'f', 1);
+                              .arg(cpuPercent, 0, 'f', 1)
+                              .arg(m_alertConfig.alert_cpu_percent, 0, 'f', 1);
               }
 
               if (fired & NEO_ALERT_MEM) {
@@ -683,8 +683,8 @@ void NeoQtMainWindow::showAlertSettingsDialog() {
   durationSpin->setValue(m_alertConfig.alert_sustain_seconds);
   form->addRow(QStringLiteral("Must persist for:"), durationSpin);
 
-  auto *notifyCheck = new QCheckBox(QStringLiteral("Desktop notification"),
-                                    &dialog);
+  auto *notifyCheck =
+      new QCheckBox(QStringLiteral("Desktop notification"), &dialog);
   notifyCheck->setChecked(m_alertConfig.alert_notify);
   form->addRow(QString(), notifyCheck);
 
@@ -714,33 +714,35 @@ void NeoQtMainWindow::showAlertSettingsDialog() {
   m_alertConfig.alert_notify = notifyCheck->isChecked();
 
   snprintf(m_alertConfig.alert_webhook, sizeof(m_alertConfig.alert_webhook),
-          "%s", webhookEdit->text().toUtf8().constData());
+           "%s", webhookEdit->text().toUtf8().constData());
 
   /* A changed configuration should get a clean slate rather than
    * possibly reporting a "sustained" breach measured partly against
    * the old thresholds. */
   alert_state_init(&m_alertState);
 
-  statusBar()->showMessage(
-      QStringLiteral("Alert thresholds updated"), 3000);
+  statusBar()->showMessage(QStringLiteral("Alert thresholds updated"), 3000);
 }
 
 void NeoQtMainWindow::handleAlertTriggered(int mask, double cpuPercent,
-                                           double memPercent,
-                                           QString message) {
+                                           double memPercent, QString message) {
   statusBar()->showMessage(message, 8000);
 
   if (m_trayIcon != nullptr) {
-    m_trayIcon->showMessage(QStringLiteral("app_top_monitoring: threshold alert"),
-                           message, QSystemTrayIcon::Warning, 8000);
+    m_trayIcon->showMessage(
+        QStringLiteral("app_top_monitoring: threshold alert"), message,
+        QSystemTrayIcon::Warning, 8000);
   }
 
   if (m_alertConfig.alert_webhook[0] != '\0') {
     const QString program = QStringLiteral("curl");
     const QStringList args = {
-        QStringLiteral("-s"),  QStringLiteral("-m"),
-        QStringLiteral("5"),   QStringLiteral("-X"),
-        QStringLiteral("POST"), QStringLiteral("-H"),
+        QStringLiteral("-s"),
+        QStringLiteral("-m"),
+        QStringLiteral("5"),
+        QStringLiteral("-X"),
+        QStringLiteral("POST"),
+        QStringLiteral("-H"),
         QStringLiteral("Content-Type: application/json"),
         QStringLiteral("-d"),
         QStringLiteral("{\"alert\":\"%1\",\"cpu\":%2,\"memory\":%3}")
@@ -852,18 +854,18 @@ void NeoQtMainWindow::showProcessContextMenu(const QPoint &pos) {
   QMenu menu(this);
 
   if (m_viewingRemote) {
-    QAction *disabledAction = menu.addAction(
-        QStringLiteral("Not available for remote processes"));
+    QAction *disabledAction =
+        menu.addAction(QStringLiteral("Not available for remote processes"));
     disabledAction->setEnabled(false);
 
     menu.exec(m_processView->viewport()->mapToGlobal(pos));
     return;
   }
 
-  QAction *titleAction = menu.addAction(
-      QStringLiteral("PID %1 (%2)")
-          .arg(process->pid)
-          .arg(QString::fromLocal8Bit(process->comm)));
+  QAction *titleAction =
+      menu.addAction(QStringLiteral("PID %1 (%2)")
+                         .arg(process->pid)
+                         .arg(QString::fromLocal8Bit(process->comm)));
   titleAction->setEnabled(false);
 
   menu.addSeparator();
@@ -904,9 +906,9 @@ void NeoQtMainWindow::sendSignalToSelectedProcess(int signalNumber) {
 
   const pid_t pid = process->pid;
   const QString comm = QString::fromLocal8Bit(process->comm);
-  const QString signalName =
-      signalNumber == SIGKILL ? QStringLiteral("SIGKILL")
-                              : QStringLiteral("SIGTERM");
+  const QString signalName = signalNumber == SIGKILL
+                                 ? QStringLiteral("SIGKILL")
+                                 : QStringLiteral("SIGTERM");
 
   const QMessageBox::StandardButton reply = QMessageBox::question(
       this, QStringLiteral("Confirm %1").arg(signalName),
@@ -957,7 +959,7 @@ void NeoQtMainWindow::reniceSelectedProcess() {
   const int value = QInputDialog::getInt(
       this, QStringLiteral("Renice PID %1").arg(pid),
       QStringLiteral("New niceness for %1 (-20 = highest priority, "
-                    "19 = lowest):")
+                     "19 = lowest):")
           .arg(comm),
       0, -20, 19, 1, &ok);
 
@@ -1001,8 +1003,7 @@ void NeoQtMainWindow::setupTrayIcon() {
 
   m_trayMenu = new QMenu(this);
 
-  QAction *showHideAction =
-      m_trayMenu->addAction(QStringLiteral("Show/Hide"));
+  QAction *showHideAction = m_trayMenu->addAction(QStringLiteral("Show/Hide"));
 
   connect(showHideAction, &QAction::triggered, this, [this]() {
     if (isVisible()) {
@@ -1042,7 +1043,8 @@ void NeoQtMainWindow::updateTrayTooltip(double cpuPercent, double memPercent) {
           .arg(memPercent, 0, 'f', 1));
 }
 
-void NeoQtMainWindow::trayIconActivated(QSystemTrayIcon::ActivationReason reason) {
+void NeoQtMainWindow::trayIconActivated(
+    QSystemTrayIcon::ActivationReason reason) {
   if (reason == QSystemTrayIcon::Trigger ||
       reason == QSystemTrayIcon::DoubleClick) {
     if (isVisible() && !isMinimized()) {

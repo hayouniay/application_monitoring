@@ -71,8 +71,8 @@ bool alert_state_is_active(const NeoAlertState *state);
  * thread is never blocked - see qt_monitor_controller. Failures here
  * are logged (monitoring_log) but never treated as fatal.
  */
-void alert_dispatch(const NeoConfig *config, int fired_mask,
-                    double cpu_percent, double mem_percent);
+void alert_dispatch(const NeoConfig *config, int fired_mask, double cpu_percent,
+                    double mem_percent);
 
 #ifdef __cplusplus
 }

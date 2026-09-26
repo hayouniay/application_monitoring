@@ -192,8 +192,8 @@ void log_write(NeoLogLevel level, const char *fmt, ...) {
 
     format_timestamp(entry.when, timestamp, sizeof(timestamp));
 
-    fprintf(g_log.file, "[%s] [%-5s] %s\n", timestamp,
-            log_level_name(level), entry.message);
+    fprintf(g_log.file, "[%s] [%-5s] %s\n", timestamp, log_level_name(level),
+            entry.message);
   }
 
   g_log.history[g_log.history_next] = entry;

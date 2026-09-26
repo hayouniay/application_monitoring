@@ -47,7 +47,7 @@ int process_send_signal(pid_t pid, int signal_number, char *message,
   if (pid <= 0) {
     set_message(message, message_size, "Invalid PID %d", (int)pid);
     log_write(NEO_LOG_ERROR, "Refused to send %s to invalid PID %d",
-             signal_name(signal_number), (int)pid);
+              signal_name(signal_number), (int)pid);
     return -1;
   }
 
@@ -55,16 +55,16 @@ int process_send_signal(pid_t pid, int signal_number, char *message,
     const int saved_errno = errno;
 
     set_message(message, message_size, "Failed to send %s to PID %d: %s",
-               signal_name(signal_number), (int)pid, strerror(saved_errno));
+                signal_name(signal_number), (int)pid, strerror(saved_errno));
 
     log_write(NEO_LOG_ERROR, "Failed to send %s to PID %d: %s",
-             signal_name(signal_number), (int)pid, strerror(saved_errno));
+              signal_name(signal_number), (int)pid, strerror(saved_errno));
 
     return -1;
   }
 
   log_write(NEO_LOG_INFO, "Sent %s to PID %d", signal_name(signal_number),
-           (int)pid);
+            (int)pid);
 
   return 0;
 }
@@ -78,8 +78,8 @@ int process_renice(pid_t pid, int priority, char *message,
   }
 
   if (priority < -20 || priority > 19) {
-    set_message(message, message_size,
-               "Invalid niceness %d (must be -20..19)", priority);
+    set_message(message, message_size, "Invalid niceness %d (must be -20..19)",
+                priority);
     return -1;
   }
 
@@ -89,10 +89,10 @@ int process_renice(pid_t pid, int priority, char *message,
     const int saved_errno = errno;
 
     set_message(message, message_size, "Failed to renice PID %d to %d: %s",
-               (int)pid, priority, strerror(saved_errno));
+                (int)pid, priority, strerror(saved_errno));
 
     log_write(NEO_LOG_ERROR, "Failed to renice PID %d to %d: %s", (int)pid,
-             priority, strerror(saved_errno));
+              priority, strerror(saved_errno));
 
     return -1;
   }
