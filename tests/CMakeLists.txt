@@ -11,6 +11,8 @@ set(NEO_TEST_SOURCES
     test_filter.c
     test_alert.c
     test_config.c
+    test_target.c
+    test_log.c
 )
 
 foreach(test_source ${NEO_TEST_SOURCES})
