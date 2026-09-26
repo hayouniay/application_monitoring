@@ -7,10 +7,13 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QInputDialog>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
+#include <QSizePolicy>
 #include <QSpinBox>
 #include <QStackedWidget>
 #include <QTime>
@@ -22,7 +25,9 @@
 
 NeoQtRemoteDialog::NeoQtRemoteDialog(QWidget *parent)
     : QDialog(parent), m_protocolCombo(nullptr), m_hostEdit(nullptr),
-      m_portSpin(nullptr), m_stack(nullptr), m_loginPage(nullptr),
+      m_portSpin(nullptr), m_stack(nullptr), m_savedTargetCombo(nullptr),
+      m_saveTargetButton(nullptr), m_deleteTargetButton(nullptr),
+      m_populatingSavedTargetCombo(false), m_loginPage(nullptr),
       m_userEdit(nullptr), m_passwordEdit(nullptr), m_identityEdit(nullptr),
       m_identityBrowseButton(nullptr), m_remoteBinEdit(nullptr),
       m_deployPage(nullptr), m_deployUserEdit(nullptr),
@@ -56,6 +61,25 @@ void NeoQtRemoteDialog::setupUi() {
   auto *connectionGroup = new QGroupBox(QStringLiteral("Remote Card"), this);
 
   auto *connectionLayout = new QFormLayout(connectionGroup);
+
+  auto *savedTargetRow = new QWidget(connectionGroup);
+  auto *savedTargetRowLayout = new QHBoxLayout(savedTargetRow);
+  savedTargetRowLayout->setContentsMargins(0, 0, 0, 0);
+
+  m_savedTargetCombo = new QComboBox(savedTargetRow);
+  m_savedTargetCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+  m_saveTargetButton =
+      new QPushButton(QStringLiteral("Save..."), savedTargetRow);
+  m_deleteTargetButton =
+      new QPushButton(QStringLiteral("Delete"), savedTargetRow);
+  m_deleteTargetButton->setEnabled(false);
+
+  savedTargetRowLayout->addWidget(m_savedTargetCombo, 1);
+  savedTargetRowLayout->addWidget(m_saveTargetButton);
+  savedTargetRowLayout->addWidget(m_deleteTargetButton);
+
+  connectionLayout->addRow(QStringLiteral("Saved target:"), savedTargetRow);
 
   m_protocolCombo = new QComboBox(connectionGroup);
 
@@ -183,6 +207,16 @@ void NeoQtRemoteDialog::setupUi() {
   connect(m_protocolCombo, &QComboBox::currentIndexChanged, this,
           &NeoQtRemoteDialog::protocolChanged);
 
+  connect(m_savedTargetCombo,
+          QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+          &NeoQtRemoteDialog::savedTargetSelected);
+
+  connect(m_saveTargetButton, &QPushButton::clicked, this,
+          &NeoQtRemoteDialog::saveCurrentAsTarget);
+
+  connect(m_deleteTargetButton, &QPushButton::clicked, this,
+          &NeoQtRemoteDialog::deleteSelectedTarget);
+
   connect(m_identityBrowseButton, &QPushButton::clicked, this,
           &NeoQtRemoteDialog::browseIdentityFile);
 
@@ -196,6 +230,8 @@ void NeoQtRemoteDialog::setupUi() {
 
   /* Apply the initial (SSH) protocol's field visibility/defaults. */
   protocolChanged(m_protocolCombo->currentIndex());
+
+  reloadSavedTargetsCombo();
 }
 
 NeoProtocol NeoQtRemoteDialog::currentProtocol() const {
@@ -507,4 +543,262 @@ void NeoQtRemoteDialog::runFtpOrTftp(NeoProtocol protocol) {
           Qt::QueuedConnection);
     }).detach();
   }
+}
+
+/* --------------------------------------------------------------------- */
+/* Saved targets (~/.config/neo-monitoring/targets.json)                  */
+/* --------------------------------------------------------------------- */
+
+void NeoQtRemoteDialog::reloadSavedTargetsCombo(const QString &selectName) {
+  NeoTargetList list;
+  target_list_init(&list);
+
+  /* A missing/unreadable file just means "no saved targets yet" - the
+   * combo simply stays at "(none)", same as targets_load() treats it
+   * as an empty list rather than an error for the CLI. */
+  targets_load(NULL, &list);
+
+  m_populatingSavedTargetCombo = true;
+
+  m_savedTargetCombo->clear();
+  m_savedTargetCombo->addItem(QStringLiteral("(none)"), QString());
+
+  int indexToSelect = 0;
+
+  for (size_t i = 0; i < list.count; ++i) {
+    const QString name = QString::fromUtf8(list.items[i].name);
+
+    m_savedTargetCombo->addItem(name, name);
+
+    if (!selectName.isEmpty() && name == selectName) {
+      indexToSelect = m_savedTargetCombo->count() - 1;
+    }
+  }
+
+  m_savedTargetCombo->setCurrentIndex(indexToSelect);
+  m_deleteTargetButton->setEnabled(indexToSelect != 0);
+
+  m_populatingSavedTargetCombo = false;
+
+  target_list_free(&list);
+}
+
+void NeoQtRemoteDialog::applyTarget(const NeoTarget &target) {
+  /* Select the matching protocol first - this fires protocolChanged(),
+   * which (among other things) resets the port to that protocol's
+   * default, so the target's own port is applied afterward below. */
+  const int protocolIndex =
+      m_protocolCombo->findData(static_cast<int>(target.protocol));
+
+  if (protocolIndex >= 0) {
+    m_protocolCombo->setCurrentIndex(protocolIndex);
+  }
+
+  m_hostEdit->setText(QString::fromUtf8(target.host));
+
+  if (target.protocol == PROTOCOL_SSH || target.protocol == PROTOCOL_TELNET) {
+    m_userEdit->setText(QString::fromUtf8(target.user));
+    m_passwordEdit->setText(QString::fromUtf8(target.password));
+    m_identityEdit->setText(QString::fromUtf8(target.identity));
+    m_remoteBinEdit->setText(target.remote_bin[0]
+                                 ? QString::fromUtf8(target.remote_bin)
+                                 : QStringLiteral("app_top_monitoring"));
+  } else {
+    m_deployUserEdit->setText(QString::fromUtf8(target.user));
+    m_deployPasswordEdit->setText(QString::fromUtf8(target.password));
+    m_remoteFileEdit->setText(QString::fromUtf8(target.remote_file));
+  }
+
+  if (target.port > 0) {
+    m_portSpin->setValue(target.port);
+  }
+}
+
+NeoTarget
+NeoQtRemoteDialog::targetFromCurrentFields(const QString &name) const {
+  NeoTarget target;
+  target_init(&target);
+
+  const QByteArray nameBytes = name.toUtf8();
+  std::snprintf(target.name, sizeof(target.name), "%s", nameBytes.constData());
+
+  target.protocol = currentProtocol();
+
+  const QByteArray hostBytes = m_hostEdit->text().trimmed().toUtf8();
+  std::snprintf(target.host, sizeof(target.host), "%s", hostBytes.constData());
+
+  target.port = m_portSpin->value();
+
+  if (target.protocol == PROTOCOL_SSH || target.protocol == PROTOCOL_TELNET) {
+
+    const QByteArray userBytes = m_userEdit->text().trimmed().toUtf8();
+    std::snprintf(target.user, sizeof(target.user), "%s",
+                  userBytes.constData());
+
+    const QByteArray passwordBytes = m_passwordEdit->text().toUtf8();
+    std::snprintf(target.password, sizeof(target.password), "%s",
+                  passwordBytes.constData());
+
+    const QByteArray identityBytes = m_identityEdit->text().trimmed().toUtf8();
+    std::snprintf(target.identity, sizeof(target.identity), "%s",
+                  identityBytes.constData());
+
+    const QByteArray remoteBinBytes =
+        m_remoteBinEdit->text().trimmed().toUtf8();
+    std::snprintf(target.remote_bin, sizeof(target.remote_bin), "%s",
+                  remoteBinBytes.constData());
+
+  } else {
+
+    const QByteArray userBytes = m_deployUserEdit->text().trimmed().toUtf8();
+    std::snprintf(target.user, sizeof(target.user), "%s",
+                  userBytes.constData());
+
+    const QByteArray passwordBytes = m_deployPasswordEdit->text().toUtf8();
+    std::snprintf(target.password, sizeof(target.password), "%s",
+                  passwordBytes.constData());
+
+    const QByteArray remoteFileBytes =
+        m_remoteFileEdit->text().trimmed().toUtf8();
+    std::snprintf(target.remote_file, sizeof(target.remote_file), "%s",
+                  remoteFileBytes.constData());
+  }
+
+  return target;
+}
+
+void NeoQtRemoteDialog::savedTargetSelected(int index) {
+  if (m_populatingSavedTargetCombo) {
+    return;
+  }
+
+  m_deleteTargetButton->setEnabled(index != 0);
+
+  const QString name = m_savedTargetCombo->itemData(index).toString();
+
+  if (name.isEmpty()) {
+    return; /* "(none)" - leave whatever is currently in the fields. */
+  }
+
+  NeoTargetList list;
+  target_list_init(&list);
+
+  if (targets_load(NULL, &list) != 0) {
+    appendLog(QStringLiteral("Failed to read saved targets."));
+    target_list_free(&list);
+    return;
+  }
+
+  const NeoTarget *target = target_list_find(&list, name.toUtf8().constData());
+
+  if (target != NULL) {
+    applyTarget(*target);
+  }
+
+  target_list_free(&list);
+}
+
+void NeoQtRemoteDialog::saveCurrentAsTarget() {
+  if (m_hostEdit->text().trimmed().isEmpty()) {
+    appendLog(QStringLiteral("Host is required before saving a target."));
+    return;
+  }
+
+  const QString currentName =
+      m_savedTargetCombo->itemData(m_savedTargetCombo->currentIndex())
+          .toString();
+
+  bool ok = false;
+
+  const QString name =
+      QInputDialog::getText(this, QStringLiteral("Save Target"),
+                            QStringLiteral("Name for this saved target:"),
+                            QLineEdit::Normal, currentName, &ok);
+
+  if (!ok || name.trimmed().isEmpty()) {
+    return;
+  }
+
+  const QString trimmedName = name.trimmed();
+
+  NeoTargetList list;
+  target_list_init(&list);
+
+  if (targets_load(NULL, &list) != 0) {
+    appendLog(QStringLiteral("Failed to read saved targets."));
+    target_list_free(&list);
+    return;
+  }
+
+  if (target_list_find(&list, trimmedName.toUtf8().constData()) != NULL) {
+
+    const QMessageBox::StandardButton reply = QMessageBox::question(
+        this, QStringLiteral("Overwrite Target"),
+        QStringLiteral("A saved target named \"%1\" already exists. "
+                       "Overwrite it?")
+            .arg(trimmedName),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+
+    if (reply != QMessageBox::Yes) {
+      target_list_free(&list);
+      return;
+    }
+  }
+
+  const NeoTarget target = targetFromCurrentFields(trimmedName);
+
+  if (target_list_upsert(&list, &target) != 0 ||
+      targets_save(NULL, &list) != 0) {
+    appendLog(QStringLiteral("Failed to save target \"%1\".").arg(trimmedName));
+    target_list_free(&list);
+    return;
+  }
+
+  target_list_free(&list);
+
+  appendLog(QStringLiteral("Saved target \"%1\".").arg(trimmedName));
+
+  reloadSavedTargetsCombo(trimmedName);
+}
+
+void NeoQtRemoteDialog::deleteSelectedTarget() {
+  const QString name =
+      m_savedTargetCombo->itemData(m_savedTargetCombo->currentIndex())
+          .toString();
+
+  if (name.isEmpty()) {
+    return;
+  }
+
+  const QMessageBox::StandardButton reply = QMessageBox::question(
+      this, QStringLiteral("Delete Target"),
+      QStringLiteral("Delete the saved target \"%1\"?").arg(name),
+      QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+
+  if (reply != QMessageBox::Yes) {
+    return;
+  }
+
+  NeoTargetList list;
+  target_list_init(&list);
+
+  if (targets_load(NULL, &list) != 0) {
+    appendLog(QStringLiteral("Failed to read saved targets."));
+    target_list_free(&list);
+    return;
+  }
+
+  target_list_remove(&list, name.toUtf8().constData());
+
+  if (targets_save(NULL, &list) != 0) {
+    appendLog(QStringLiteral("Failed to update saved targets."));
+    target_list_free(&list);
+    return;
+  }
+
+  target_list_free(&list);
+
+  appendLog(QStringLiteral("Deleted saved target \"%1\".").arg(name));
+
+  reloadSavedTargetsCombo();
 }

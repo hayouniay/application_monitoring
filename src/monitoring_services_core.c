@@ -5,6 +5,7 @@
 #include "monitoring_metrics.h"
 #include "monitoring_process.h"
 #include "monitoring_services.h"
+#include "monitoring_targets.h"
 
 #include <ctype.h>
 #include <dirent.h>
@@ -300,6 +301,12 @@ void config_init(NeoConfig *config) {
   config->alert_sustain_seconds = 5.0;
   config->alert_notify = false;
   config->alert_webhook[0] = '\0';
+
+  config->target_name[0] = '\0';
+  config->save_target_name[0] = '\0';
+  config->delete_target_name[0] = '\0';
+  config->list_targets = false;
+  config->targets_file[0] = '\0';
 }
 
 /* ------------------------------------------------------------------------- */
@@ -577,8 +584,10 @@ void print_usage(const char *program) {
          "  Chart.js report: CPU / Memory / Swap / I/O graphs in one page,\n"
          "  with a dropdown to show all graphs or isolate one). Currently\n"
          "  local monitoring only (not combined with --protocol).\n"
-         "\n"
-         "Logging:\n"
+         "\n",
+         program);
+
+  printf("Logging:\n"
          "      --log-file PATH     Append timestamped log entries to PATH\n"
          "      --log-level LEVEL  error|warn|info|debug (default info)\n"
          "\n"
@@ -595,6 +604,21 @@ void print_usage(const char *program) {
          "  In --once/--batch/--csv/--json modes, exiting with an alert\n"
          "  condition still active uses exit code 2 instead of 0.\n"
          "\n"
+         "Saved remote targets (~/.config/neo-monitoring/targets.json):\n"
+         "      --target NAME       Use a saved target's connection "
+         "settings\n"
+         "      --save-target NAME  Save this run's connection settings "
+         "under NAME\n"
+         "      --delete-target NAME Delete a saved target\n"
+         "      --list-targets      List saved targets and exit\n"
+         "      --targets-file PATH Use PATH instead of the default "
+         "targets file\n"
+         "\n"
+         "  A saved target pre-fills --protocol/--host/--user/--password/\n"
+         "  --port/--identity/--remote-bin/--remote-file; any of those "
+         "flags\n"
+         "  given explicitly on the same command line still override it.\n"
+         "\n"
          "Interactive keys:\n"
          "  q  quit\n"
          "  c  sort CPU\n"
@@ -604,8 +628,7 @@ void print_usage(const char *program) {
          "  -  decrease refresh interval\n"
          "  r  refresh immediately\n"
          "  v  reverse sorting\n"
-         "\n",
-         program);
+         "\n");
 }
 
 /* ------------------------------------------------------------------------- */
@@ -668,12 +691,27 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       {"alert-notify", no_argument, 0, 4103},
       {"alert-webhook", required_argument, 0, 4104},
 
+      {"target", required_argument, 0, 5000},
+      {"save-target", required_argument, 0, 5001},
+      {"delete-target", required_argument, 0, 5002},
+      {"list-targets", no_argument, 0, 5003},
+      {"targets-file", required_argument, 0, 5004},
+
       {"help", no_argument, 0, 'h'},
       {"version", no_argument, 0, 'V'},
 
       {0, 0, 0, 0}};
 
   const char *user_arg = NULL;
+
+  bool protocol_set = false;
+  bool host_set = false;
+  bool user_set = false;
+  bool password_set = false;
+  bool port_set = false;
+  bool identity_set = false;
+  bool remote_bin_set = false;
+  bool remote_file_set = false;
 
   if (config == NULL) {
     return -1;
@@ -745,6 +783,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
       user_arg = optarg;
 
       snprintf(config->remote_user, sizeof(config->remote_user), "%s", optarg);
+      user_set = true;
       break;
 
     case 's':
@@ -878,29 +917,35 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
         return -1;
       }
 
+      protocol_set = true;
       break;
 
     case 2001:
       snprintf(config->remote_host, sizeof(config->remote_host), "%s", optarg);
+      host_set = true;
       break;
 
     case 2002:
       config->remote_port = atoi(optarg);
+      port_set = true;
       break;
 
     case 2003:
       snprintf(config->remote_identity, sizeof(config->remote_identity), "%s",
                optarg);
+      identity_set = true;
       break;
 
     case 2004:
       snprintf(config->remote_password, sizeof(config->remote_password), "%s",
                optarg);
+      password_set = true;
       break;
 
     case 2005:
       snprintf(config->remote_binary, sizeof(config->remote_binary), "%s",
                optarg);
+      remote_bin_set = true;
       break;
 
     case 2006:
@@ -909,6 +954,7 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
 
     case 2007:
       snprintf(config->remote_file, sizeof(config->remote_file), "%s", optarg);
+      remote_file_set = true;
       break;
 
     case 3000:
@@ -989,6 +1035,29 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
                optarg);
       break;
 
+    case 5000:
+      snprintf(config->target_name, sizeof(config->target_name), "%s", optarg);
+      break;
+
+    case 5001:
+      snprintf(config->save_target_name, sizeof(config->save_target_name), "%s",
+               optarg);
+      break;
+
+    case 5002:
+      snprintf(config->delete_target_name, sizeof(config->delete_target_name),
+               "%s", optarg);
+      break;
+
+    case 5003:
+      config->list_targets = true;
+      break;
+
+    case 5004:
+      snprintf(config->targets_file, sizeof(config->targets_file), "%s",
+               optarg);
+      break;
+
     case 'h':
       print_usage(argv[0]);
       exit(EXIT_SUCCESS);
@@ -1004,6 +1073,149 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
 
       return -1;
     }
+  }
+
+  /*
+   * Saved remote targets: --list-targets / --delete-target are pure
+   * side-effecting commands, handled here (after the full command
+   * line has been parsed, so a --targets-file given anywhere on the
+   * line is already known) rather than the moment their flag is seen.
+   */
+  if (config->list_targets || config->delete_target_name[0] != '\0') {
+
+    NeoTargetList list;
+    const char *targets_path =
+        config->targets_file[0] ? config->targets_file : NULL;
+
+    target_list_init(&list);
+
+    if (targets_load(targets_path, &list) != 0) {
+      fprintf(stderr, "Failed to read saved targets\n");
+      target_list_free(&list);
+      exit(EXIT_FAILURE);
+    }
+
+    if (config->delete_target_name[0] != '\0') {
+
+      if (target_list_remove(&list, config->delete_target_name) != 0) {
+        fprintf(stderr, "No saved target named '%s'\n",
+                config->delete_target_name);
+        target_list_free(&list);
+        exit(EXIT_FAILURE);
+      }
+
+      if (targets_save(targets_path, &list) != 0) {
+        fprintf(stderr, "Failed to write saved targets\n");
+        target_list_free(&list);
+        exit(EXIT_FAILURE);
+      }
+
+      printf("Deleted saved target '%s'\n", config->delete_target_name);
+
+    } else {
+
+      size_t i;
+
+      if (list.count == 0) {
+        printf("No saved targets.\n");
+      }
+
+      for (i = 0; i < list.count; ++i) {
+
+        const NeoTarget *target = &list.items[i];
+        const char *protocol_name =
+            target->protocol == PROTOCOL_SSH      ? "ssh"
+            : target->protocol == PROTOCOL_TELNET ? "telnet"
+            : target->protocol == PROTOCOL_FTP    ? "ftp"
+            : target->protocol == PROTOCOL_TFTP   ? "tftp"
+                                                  : "local";
+
+        printf("%-20s %-8s %s%s%s", target->name, protocol_name,
+               target->user[0] ? target->user : "", target->user[0] ? "@" : "",
+               target->host);
+
+        if (target->port > 0) {
+          printf(":%d", target->port);
+        }
+
+        putchar('\n');
+      }
+    }
+
+    target_list_free(&list);
+    exit(EXIT_SUCCESS);
+  }
+
+  /*
+   * --target NAME: apply the saved target's connection fields as
+   * defaults, but only for fields not already given explicitly on
+   * this command line - an explicit --host/--user/etc. always wins
+   * over what's saved, regardless of where --target appears among the
+   * other flags.
+   */
+  if (config->target_name[0] != '\0') {
+
+    NeoTargetList list;
+    const NeoTarget *target;
+    const char *targets_path =
+        config->targets_file[0] ? config->targets_file : NULL;
+
+    target_list_init(&list);
+
+    if (targets_load(targets_path, &list) != 0) {
+      fprintf(stderr, "Failed to read saved targets\n");
+      target_list_free(&list);
+      return -1;
+    }
+
+    target = target_list_find(&list, config->target_name);
+
+    if (target == NULL) {
+      fprintf(stderr, "No saved target named '%s' (see --list-targets)\n",
+              config->target_name);
+      target_list_free(&list);
+      return -1;
+    }
+
+    if (!protocol_set) {
+      config->protocol = target->protocol;
+    }
+
+    if (!host_set) {
+      snprintf(config->remote_host, sizeof(config->remote_host), "%s",
+               target->host);
+    }
+
+    if (!user_set) {
+      snprintf(config->remote_user, sizeof(config->remote_user), "%s",
+               target->user);
+    }
+
+    if (!password_set) {
+      snprintf(config->remote_password, sizeof(config->remote_password), "%s",
+               target->password);
+    }
+
+    if (!port_set) {
+      config->remote_port = target->port;
+    }
+
+    if (!identity_set) {
+      snprintf(config->remote_identity, sizeof(config->remote_identity), "%s",
+               target->identity);
+    }
+
+    if (!remote_bin_set) {
+      snprintf(config->remote_binary, sizeof(config->remote_binary), "%s",
+               target->remote_bin);
+    }
+
+    if (!remote_file_set) {
+      snprintf(config->remote_file, sizeof(config->remote_file), "%s",
+               target->remote_file);
+    }
+
+    target_list_free(&list);
   }
 
   /*
@@ -1047,6 +1259,50 @@ int config_parse(NeoConfig *config, int argc, char **argv) {
 
       return -1;
     }
+  }
+
+  /*
+   * --save-target NAME: persist this run's fully-resolved connection
+   * fields (after any --target defaults and explicit overrides above)
+   * under NAME, then continue on to actually run normally - so
+   * `--target office-pi --port 2222 --save-target office-pi` both
+   * connects and updates the saved entry in one command.
+   */
+  if (config->save_target_name[0] != '\0') {
+
+    NeoTargetList list;
+    NeoTarget target;
+    const char *targets_path =
+        config->targets_file[0] ? config->targets_file : NULL;
+
+    if (config->protocol == PROTOCOL_LOCAL) {
+      fprintf(stderr, "--save-target requires a non-local --protocol "
+                      "(ssh/telnet/ftp/tftp)\n");
+      return -1;
+    }
+
+    target_list_init(&list);
+
+    if (targets_load(targets_path, &list) != 0) {
+      fprintf(stderr, "Failed to read saved targets\n");
+      target_list_free(&list);
+      return -1;
+    }
+
+    target_from_config(config, config->save_target_name, &target);
+
+    if (target_list_upsert(&list, &target) != 0 ||
+        targets_save(targets_path, &list) != 0) {
+
+      fprintf(stderr, "Failed to save target '%s'\n", config->save_target_name);
+
+      target_list_free(&list);
+      return -1;
+    }
+
+    printf("Saved target '%s'\n", config->save_target_name);
+
+    target_list_free(&list);
   }
 
   return 0;

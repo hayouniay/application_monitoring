@@ -160,6 +160,47 @@ the local filename).
 combined with a non\-local
 .B \-\-protocol
 is rejected with an error.
+.SS Saved remote targets
+.TP
+.B \-\-target \fINAME\fR
+Load a saved target's connection settings as defaults for this run.
+Only fields not already given explicitly elsewhere on the command line
+are filled in \- an explicit
+\-\-host/\-\-user/\-\-port/etc.
+always wins, regardless of where
+\-\-target
+appears among the other flags.
+.TP
+.B \-\-save\-target \fINAME\fR
+Save this run's connection settings (after any
+\-\-target
+defaults and explicit overrides) under
+.IR NAME ,
+then continue running normally. Requires a non\-local
+.BR \-\-protocol .
+.TP
+.B \-\-delete\-target \fINAME\fR
+Delete a saved target and exit.
+.TP
+.B \-\-list\-targets
+List every saved target and exit.
+.TP
+.B \-\-targets\-file \fIPATH\fR
+Use
+.I PATH
+instead of the default targets file. Mainly useful for testing.
+.PP
+By default, targets live in
+.IR $XDG_CONFIG_HOME/neo\-monitoring/targets.json ,
+or
+.I ~/.config/neo\-monitoring/targets.json
+if
+.I $XDG_CONFIG_HOME
+isn't set, written with
+.B 0600
+permissions since a saved target may include a plaintext Telnet/FTP
+password (SSH always uses key\-based auth, never a saved password).
+The Qt GUI's Connect to Remote dialog reads and writes the same file.
 .SS Capture (time\-series + chart report)
 .TP
 .B \-\-capture
@@ -260,6 +301,11 @@ One JSON snapshot for scripting:
 Monitor a remote card over SSH:
 .B app_top_monitoring \-\-protocol ssh \-\-host 10.0.0.5 \-u admin
 .TP
+Save that connection for next time, then use it:
+.B app_top_monitoring \-\-protocol ssh \-\-host 10.0.0.5 \-u admin \-\-save\-target office\-pi
+.br
+.B app_top_monitoring \-\-target office\-pi
+.TP
 Capture 60 seconds of system load with post\-mortem logging:
 .B app_top_monitoring \-\-capture=60 \-\-log\-file /var/log/app_top_monitoring.log
 .TP
@@ -270,6 +316,11 @@ Alert if CPU stays above 90% for a minute, notifying and exiting 2:
 .I VERSION
 Single source of truth for the version reported by \-\-version and this
 manual page.
+.TP
+.I ~/.config/neo\-monitoring/targets.json
+Saved remote targets (see
+.B "Saved remote targets"
+above); shared with the Qt GUI's Connect to Remote dialog.
 .SH SEE ALSO
 .BR top (1),
 .BR ps (1),

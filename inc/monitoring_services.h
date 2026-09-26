@@ -35,6 +35,11 @@
 #define MAX_HOST 256
 #define MAX_REMOTE_PATH 512
 
+/* Saved remote target name limit (see monitoring_targets.h) - defined
+ * here rather than there to avoid a circular include, since NeoConfig
+ * below needs it too. */
+#define TARGET_NAME_MAX 64
+
 /* ------------------------------------------------------------------------- */
 /* Sorting                                                                   */
 /* ------------------------------------------------------------------------- */
@@ -276,6 +281,34 @@ typedef struct {
   /* HTTP(S) URL to POST a small JSON payload to when an alert fires;
    * empty = disabled. */
   char alert_webhook[MAX_REMOTE_PATH];
+
+  /* --------------------------------------------------------------------- */
+  /* Saved remote targets (--target, --save-target, --list-targets,        */
+  /* --delete-target)                                                      */
+  /* --------------------------------------------------------------------- */
+
+  /* Name of a saved target to load remote-connection defaults from;
+   * empty = none. Applied before the remote-connection fields above so
+   * any explicit --host/--user/etc. flag on the same command line
+   * still wins - see target_apply_to_config() in monitoring_targets.h. */
+  char target_name[TARGET_NAME_MAX];
+
+  /* Non-empty = after parsing, save the (possibly --target-seeded,
+   * possibly further overridden) remote-connection fields above as a
+   * saved target under this name, then continue normally. */
+  char save_target_name[TARGET_NAME_MAX];
+
+  /* Non-empty = delete the named saved target, print a confirmation,
+   * and exit (before anything else runs). */
+  char delete_target_name[TARGET_NAME_MAX];
+
+  /* True = print every saved target and exit (before anything else
+   * runs). */
+  bool list_targets;
+
+  /* Overrides the default ~/.config/neo-monitoring/targets.json path;
+   * empty = use the default. Mainly useful for testing. */
+  char targets_file[MAX_REMOTE_PATH];
 
 } NeoConfig;
 

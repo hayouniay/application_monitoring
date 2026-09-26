@@ -83,6 +83,28 @@ Available in the default interactive table mode (not `--once`/`--batch`/`--csv`/
 
 `--capture` combined with a non-`local` `--protocol` is rejected with an error rather than silently doing the wrong thing. See [REMOTE_TESTING.md](REMOTE_TESTING.md) for setting up local test servers for each protocol.
 
+## Saved remote targets
+
+Retyping the same `--protocol ssh --host 192.168.1.50 --user root --identity ~/.ssh/id_rsa` for every connection gets old fast. A small JSON file holds named connection profiles instead:
+
+| Flag | Argument | Description |
+| --- | --- | --- |
+| `--target` | name | Load a saved target's connection settings as defaults for this run. |
+| `--save-target` | name | Save this run's connection settings (after any `--target` defaults and overrides below) under this name, then continue running normally. |
+| `--delete-target` | name | Delete a saved target and exit. |
+| `--list-targets` | | List every saved target and exit. |
+| `--targets-file` | path | Use this file instead of the default location. Mainly useful for testing. |
+
+By default, targets live in `$XDG_CONFIG_HOME/neo-monitoring/targets.json`, or `~/.config/neo-monitoring/targets.json` if `$XDG_CONFIG_HOME` isn't set. The file is written with `0600` permissions since a saved target may include a plaintext Telnet/FTP password (SSH always uses key-based auth, never a saved password).
+
+`--target` only fills in fields you didn't already give explicitly — so `--target office-pi --port 2222` connects to `office-pi`'s saved host/user/identity but on port 2222, regardless of which flag comes first on the command line. Combine `--target` and `--save-target` in one command to load, tweak, and re-save a target in one step:
+
+```
+app_top_monitoring --target office-pi --port 2222 --save-target office-pi
+```
+
+Saving requires a non-`local` `--protocol` (there's nothing remote to save otherwise). The Qt app has a native equivalent — see [Qt GUI Guide](QT_GUI_GUIDE.md#connect-to-remote-dialog).
+
 ## Capture (time-series + chart report)
 
 | Flag | Argument | Description |
