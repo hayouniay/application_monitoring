@@ -119,6 +119,60 @@
             }
         },
 
+        // ── TESTS ─────────────────────────────────────────────────────────────
+
+        {
+            "label": "APP TOP Monitoring - Configure Tests",
+            "type": "shell",
+            "command": "cmake -S . -B build -DBUILD_QT_APP=OFF -DBUILD_TESTS=ON",
+            "problemMatcher": [],
+            "icon": {
+                "id": "gear",
+                "color": "terminal.ansiBlue"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Build Tests",
+            "type": "shell",
+            "command": "cmake --build build",
+            "dependsOn": [
+                "APP TOP Monitoring - Configure Tests"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "icon": {
+                "id": "tools",
+                "color": "terminal.ansiGreen"
+            }
+        },
+
+        {
+            "label": "APP TOP Monitoring - Run Tests",
+            "type": "shell",
+            "command": "ctest --test-dir build --output-on-failure",
+            "dependsOn": [
+                "APP TOP Monitoring - Build Tests"
+            ],
+            "dependsOrder": "sequence",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "icon": {
+                "id": "beaker",
+                "color": "terminal.ansiGreen"
+            }
+        },
+
         // ── CLEAN ─────────────────────────────────────────────────────────────
 
         {

@@ -12,12 +12,16 @@ jobs:
   app_monitor_verify-dependencies:
     uses: ./.github/workflows/app_monitor_verify-dependencies.yml
 
-  app_monitor_build-qt:
+  app_monitor_test:
     needs: app_monitor_verify-dependencies
+    uses: ./.github/workflows/app_monitor_test.yml
+
+  app_monitor_build-qt:
+    needs: app_monitor_test
     uses: ./.github/workflows/app_monitor_build-qt.yml
 
   app_monitor_build-cli:
-    needs: app_monitor_verify-dependencies
+    needs: app_monitor_test
     uses: ./.github/workflows/app_monitor_build-cli.yml
   app_monitor_publish:
     needs: [ app_monitor_build-qt, app_monitor_build-cli ]

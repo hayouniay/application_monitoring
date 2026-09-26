@@ -154,9 +154,9 @@ static int run_remote_monitor(NeoConfig *config) {
   process_list_init(&list);
 
   log_write(NEO_LOG_INFO, "Starting remote monitoring via %s: %s%s%s",
-           config->protocol == PROTOCOL_SSH ? "SSH" : "Telnet",
-           target.user[0] ? target.user : "", target.user[0] ? "@" : "",
-           target.host);
+            config->protocol == PROTOCOL_SSH ? "SSH" : "Telnet",
+            target.user[0] ? target.user : "", target.user[0] ? "@" : "",
+            target.host);
 
   while (running) {
 
@@ -175,7 +175,7 @@ static int run_remote_monitor(NeoConfig *config) {
       fprintf(stderr, "monitoring_services: %s\n", message);
 
       log_write(NEO_LOG_ERROR, "Remote monitoring connection failed: %s",
-               message);
+                message);
 
       process_list_free(&list);
 
@@ -240,8 +240,8 @@ static int run_deploy(NeoConfig *config) {
          config->protocol == PROTOCOL_FTP ? "FTP" : "TFTP");
 
   log_write(NEO_LOG_INFO, "Deploying %s to %s via %s", config->local_file,
-           config->remote_host,
-           config->protocol == PROTOCOL_FTP ? "FTP" : "TFTP");
+            config->remote_host,
+            config->protocol == PROTOCOL_FTP ? "FTP" : "TFTP");
 
   if (config->protocol == PROTOCOL_FTP) {
 
@@ -338,7 +338,7 @@ static int run_local_monitor(NeoConfig *config) {
                       "failed to read system information\n");
 
       log_write(NEO_LOG_ERROR, "Refresh failed: unable to read system "
-                              "information");
+                               "information");
 
       break;
     }
@@ -394,9 +394,7 @@ static int run_local_monitor(NeoConfig *config) {
 
     if (config->once) {
 
-      const int exit_code = alert_ever_fired
-                                ? NEO_EXIT_ALERT
-                                : EXIT_SUCCESS;
+      const int exit_code = alert_ever_fired ? NEO_EXIT_ALERT : EXIT_SUCCESS;
 
       process_list_free(&process_list);
       previous_list_free(&previous_list);
@@ -411,9 +409,7 @@ static int run_local_monitor(NeoConfig *config) {
 
     if (config->batch && !interactive) {
 
-      const int exit_code = alert_ever_fired
-                                ? NEO_EXIT_ALERT
-                                : EXIT_SUCCESS;
+      const int exit_code = alert_ever_fired ? NEO_EXIT_ALERT : EXIT_SUCCESS;
 
       process_list_free(&process_list);
       previous_list_free(&previous_list);
@@ -487,7 +483,7 @@ static int run_capture_mode(NeoConfig *config) {
            config->capture_duration_seconds);
 
     log_write(NEO_LOG_INFO, "Capture started (duration=%.0fs)",
-             config->capture_duration_seconds);
+              config->capture_duration_seconds);
   } else {
     printf("Capturing... press Ctrl+C to stop.\n");
 
@@ -502,7 +498,7 @@ static int run_capture_mode(NeoConfig *config) {
                       "failed to read system information\n");
 
       log_write(NEO_LOG_ERROR,
-               "Capture failed: unable to read system information");
+                "Capture failed: unable to read system information");
       break;
     }
 
@@ -542,7 +538,7 @@ static int run_capture_mode(NeoConfig *config) {
   putchar('\n');
 
   log_write(NEO_LOG_INFO, "Capture stopped: %zu sample(s) captured",
-           series.count);
+            series.count);
 
   if (series.count == 0) {
 
@@ -604,10 +600,9 @@ int main(int argc, char **argv) {
   }
 
   if (log_init(config.log_file[0] ? config.log_file : NULL,
-              (NeoLogLevel)config.log_level) != 0) {
+               (NeoLogLevel)config.log_level) != 0) {
 
-    fprintf(stderr,
-            "monitoring_services: failed to open log file '%s': %s\n",
+    fprintf(stderr, "monitoring_services: failed to open log file '%s': %s\n",
             config.log_file, strerror(errno));
 
     config_free(&config);

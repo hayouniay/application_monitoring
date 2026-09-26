@@ -813,8 +813,8 @@ int remote_ssh_scan(const NeoRemoteTarget *target, NeoProcessList *list,
   }
 
   log_write(NEO_LOG_DEBUG, "SSH: connecting to %s@%s:%d",
-           target->user[0] ? target->user : "(default user)", target->host,
-           target->port);
+            target->user[0] ? target->user : "(default user)", target->host,
+            target->port);
 
   exit_code = run_command(argv_buf, NULL, DEFAULT_TIMEOUT_MS, &out, &err);
 
@@ -823,8 +823,8 @@ int remote_ssh_scan(const NeoRemoteTarget *target, NeoProcessList *list,
                 exit_code,
                 (err != NULL && err[0] != '\0') ? err : "no error output");
     log_write(NEO_LOG_ERROR, "SSH scan of %s failed (exit %d): %s",
-             target->host, exit_code,
-             (err != NULL && err[0] != '\0') ? err : "no error output");
+              target->host, exit_code,
+              (err != NULL && err[0] != '\0') ? err : "no error output");
     free(out);
     free(err);
     return -1;
@@ -833,8 +833,8 @@ int remote_ssh_scan(const NeoRemoteTarget *target, NeoProcessList *list,
   if (parse_combined_output(out, list, system) != 0) {
     set_message(message, message_size, "Failed to parse remote CSV output");
     log_write(NEO_LOG_ERROR,
-             "SSH scan of %s failed: could not parse remote output",
-             target->host);
+              "SSH scan of %s failed: could not parse remote output",
+              target->host);
     free(out);
     free(err);
     return -1;
@@ -971,7 +971,7 @@ int remote_telnet_scan(const NeoRemoteTarget *target, NeoProcessList *list,
   argv_buf[3] = NULL;
 
   log_write(NEO_LOG_DEBUG, "Telnet: connecting to %s:%s", target->host,
-           port_str);
+            port_str);
 
   exit_code = run_command(argv_buf, script, DEFAULT_TIMEOUT_MS, &out, &err);
 
@@ -985,9 +985,8 @@ int remote_telnet_scan(const NeoRemoteTarget *target, NeoProcessList *list,
   if (exit_code != 0 && (out == NULL || out[0] == '\0')) {
     set_message(message, message_size, "Telnet connection failed: %s",
                 (err != NULL && err[0] != '\0') ? err : "no error output");
-    log_write(NEO_LOG_ERROR, "Telnet connection to %s failed: %s",
-             target->host,
-             (err != NULL && err[0] != '\0') ? err : "no error output");
+    log_write(NEO_LOG_ERROR, "Telnet connection to %s failed: %s", target->host,
+              (err != NULL && err[0] != '\0') ? err : "no error output");
     free(out);
     free(err);
     return -1;
@@ -996,8 +995,8 @@ int remote_telnet_scan(const NeoRemoteTarget *target, NeoProcessList *list,
   if (parse_combined_output(out, list, system) != 0) {
     set_message(message, message_size, "Failed to parse remote CSV output");
     log_write(NEO_LOG_ERROR,
-             "Telnet scan of %s failed: could not parse remote output",
-             target->host);
+              "Telnet scan of %s failed: could not parse remote output",
+              target->host);
     free(out);
     free(err);
     return -1;
@@ -1010,8 +1009,8 @@ int remote_telnet_scan(const NeoRemoteTarget *target, NeoProcessList *list,
                 "\"%s\" is on the card's PATH.",
                 target->remote_binary[0] ? target->remote_binary
                                          : "app_top_monitoring");
-    log_write(NEO_LOG_WARN,
-             "Telnet session with %s produced no usable data", target->host);
+    log_write(NEO_LOG_WARN, "Telnet session with %s produced no usable data",
+              target->host);
     free(out);
     free(err);
     return -1;
@@ -1072,7 +1071,7 @@ int remote_ftp_deploy(const NeoFtpTarget *target, const char *local_path,
   argv_buf[5] = NULL;
 
   log_write(NEO_LOG_INFO, "FTP: uploading %s to %s:%d", local_path,
-           target->host, target->port > 0 ? target->port : 21);
+            target->host, target->port > 0 ? target->port : 21);
 
   exit_code = run_command(argv_buf, NULL, DEFAULT_TIMEOUT_MS, &out, &err);
 
@@ -1080,7 +1079,7 @@ int remote_ftp_deploy(const NeoFtpTarget *target, const char *local_path,
     set_message(message, message_size, "FTP upload failed: %s",
                 (err != NULL && err[0] != '\0') ? err : "unknown error");
     log_write(NEO_LOG_ERROR, "FTP upload to %s failed: %s", target->host,
-             (err != NULL && err[0] != '\0') ? err : "unknown error");
+              (err != NULL && err[0] != '\0') ? err : "unknown error");
     free(out);
     free(err);
     return -1;
@@ -1141,7 +1140,7 @@ int remote_tftp_deploy(const NeoTftpTarget *target, const char *local_path,
   exit_code = run_command(argv_buf, NULL, DEFAULT_TIMEOUT_MS, &out, &err);
 
   log_write(NEO_LOG_INFO, "TFTP: uploading %s to %s:%s", local_path,
-           target->host, port_str);
+            target->host, port_str);
 
   /*
    * Several tftp client implementations (notably tftp-hpa) return
@@ -1162,9 +1161,9 @@ int remote_tftp_deploy(const NeoTftpTarget *target, const char *local_path,
                   : (err != NULL && err[0] != '\0') ? err
                                                     : "unknown error");
       log_write(NEO_LOG_ERROR, "TFTP transfer to %s failed: %s", target->host,
-               (out != NULL && out[0] != '\0')   ? out
-               : (err != NULL && err[0] != '\0') ? err
-                                                 : "unknown error");
+                (out != NULL && out[0] != '\0')   ? out
+                : (err != NULL && err[0] != '\0') ? err
+                                                  : "unknown error");
       free(out);
       free(err);
       return -1;

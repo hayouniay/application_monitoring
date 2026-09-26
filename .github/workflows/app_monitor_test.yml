@@ -1,0 +1,29 @@
+name: "App Monitor - Run unit tests"
+
+on:
+  workflow_call:
+
+env:
+  BUILD_DIR: build
+
+jobs:
+  test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
+
+      - name: Configure (CLI-only, tests enabled)
+        run: cmake -S . -B ${{ env.BUILD_DIR }} -DBUILD_QT_APP=OFF -DBUILD_TESTS=ON
+
+      - name: Build tests
+        run: cmake --build ${{ env.BUILD_DIR }}
+
+      - name: Run tests
+        run: ctest --test-dir ${{ env.BUILD_DIR }} --output-on-failure

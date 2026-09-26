@@ -20,9 +20,8 @@ void alert_state_init(NeoAlertState *state) {
 /* Evaluates a single metric against its threshold/sustain window,
  * updating the breach-tracking fields in place. Returns true if this
  * call is the moment it newly fired. */
-static bool evaluate_one(double value, double threshold,
-                         double sustain_seconds, bool *breached,
-                         time_t *breach_start, bool *fired) {
+static bool evaluate_one(double value, double threshold, double sustain_seconds,
+                         bool *breached, time_t *breach_start, bool *fired) {
   const time_t now = time(NULL);
 
   if (threshold <= 0.0) {
@@ -60,13 +59,14 @@ static bool evaluate_one(double value, double threshold,
 int alert_evaluate(const NeoConfig *config, NeoAlertState *state,
                    double cpu_percent, double mem_percent) {
   int mask = 0;
-  const double sustain =
-      config->alert_sustain_seconds > 0.0 ? config->alert_sustain_seconds
-                                          : 0.0;
+  double sustain;
 
   if (config == NULL || state == NULL) {
     return 0;
   }
+
+  sustain =
+      config->alert_sustain_seconds > 0.0 ? config->alert_sustain_seconds : 0.0;
 
   if (evaluate_one(cpu_percent, config->alert_cpu_percent, sustain,
                    &state->cpu_breached, &state->cpu_breach_start,
@@ -134,27 +134,21 @@ static int run_fire_and_forget(char *const argv[]) {
 
 static void notify_desktop(const char *title, const char *body) {
   char *argv[] = {(char *)"notify-send", (char *)"-u", (char *)"critical",
-                 (char *)title, (char *)body, NULL};
+                  (char *)title,         (char *)body, NULL};
 
   if (run_fire_and_forget(argv) != 0) {
     log_write(NEO_LOG_DEBUG,
-             "Desktop notification not sent (is notify-send installed?)");
+              "Desktop notification not sent (is notify-send installed?)");
   }
 }
 
 static void post_webhook(const char *url, const char *json_payload) {
-  char *argv[] = {(char *)"curl",
-                 (char *)"-s",
-                 (char *)"-m",
-                 (char *)"5",
-                 (char *)"-X",
-                 (char *)"POST",
-                 (char *)"-H",
-                 (char *)"Content-Type: application/json",
-                 (char *)"-d",
-                 (char *)json_payload,
-                 (char *)url,
-                 NULL};
+  char *argv[] = {(char *)"curl", (char *)"-s",
+                  (char *)"-m",   (char *)"5",
+                  (char *)"-X",   (char *)"POST",
+                  (char *)"-H",   (char *)"Content-Type: application/json",
+                  (char *)"-d",   (char *)json_payload,
+                  (char *)url,    NULL};
 
   if (run_fire_and_forget(argv) != 0) {
     log_write(NEO_LOG_WARN, "Alert webhook POST to %s failed", url);
@@ -163,8 +157,8 @@ static void post_webhook(const char *url, const char *json_payload) {
   }
 }
 
-void alert_dispatch(const NeoConfig *config, int fired_mask,
-                    double cpu_percent, double mem_percent) {
+void alert_dispatch(const NeoConfig *config, int fired_mask, double cpu_percent,
+                    double mem_percent) {
   char title[128];
   char body[256];
   char payload[512];
@@ -182,9 +176,9 @@ void alert_dispatch(const NeoConfig *config, int fired_mask,
 
   if (fired_mask & NEO_ALERT_CPU) {
     snprintf(title, sizeof(title), "app_top_monitoring: CPU threshold");
-    snprintf(body, sizeof(body), "CPU usage %.1f%% has stayed above %.1f%% for %.0fs",
-            cpu_percent, config->alert_cpu_percent,
-            config->alert_sustain_seconds);
+    snprintf(body, sizeof(body),
+             "CPU usage %.1f%% has stayed above %.1f%% for %.0fs", cpu_percent,
+             config->alert_cpu_percent, config->alert_sustain_seconds);
 
     log_write(NEO_LOG_WARN, "ALERT: %s", body);
 
@@ -194,10 +188,10 @@ void alert_dispatch(const NeoConfig *config, int fired_mask,
 
     if (config->alert_webhook[0] != '\0') {
       snprintf(payload, sizeof(payload),
-              "{\"alert\":\"cpu\",\"value\":%.2f,\"threshold\":%.2f,"
-              "\"sustained_seconds\":%.0f,\"timestamp\":\"%s\"}",
-              cpu_percent, config->alert_cpu_percent,
-              config->alert_sustain_seconds, timestamp);
+               "{\"alert\":\"cpu\",\"value\":%.2f,\"threshold\":%.2f,"
+               "\"sustained_seconds\":%.0f,\"timestamp\":\"%s\"}",
+               cpu_percent, config->alert_cpu_percent,
+               config->alert_sustain_seconds, timestamp);
 
       post_webhook(config->alert_webhook, payload);
     }
@@ -206,9 +200,9 @@ void alert_dispatch(const NeoConfig *config, int fired_mask,
   if (fired_mask & NEO_ALERT_MEM) {
     snprintf(title, sizeof(title), "app_top_monitoring: Memory threshold");
     snprintf(body, sizeof(body),
-            "Memory usage %.1f%% has stayed above %.1f%% for %.0fs",
-            mem_percent, config->alert_mem_percent,
-            config->alert_sustain_seconds);
+             "Memory usage %.1f%% has stayed above %.1f%% for %.0fs",
+             mem_percent, config->alert_mem_percent,
+             config->alert_sustain_seconds);
 
     log_write(NEO_LOG_WARN, "ALERT: %s", body);
 
@@ -218,10 +212,10 @@ void alert_dispatch(const NeoConfig *config, int fired_mask,
 
     if (config->alert_webhook[0] != '\0') {
       snprintf(payload, sizeof(payload),
-              "{\"alert\":\"memory\",\"value\":%.2f,\"threshold\":%.2f,"
-              "\"sustained_seconds\":%.0f,\"timestamp\":\"%s\"}",
-              mem_percent, config->alert_mem_percent,
-              config->alert_sustain_seconds, timestamp);
+               "{\"alert\":\"memory\",\"value\":%.2f,\"threshold\":%.2f,"
+               "\"sustained_seconds\":%.0f,\"timestamp\":\"%s\"}",
+               mem_percent, config->alert_mem_percent,
+               config->alert_sustain_seconds, timestamp);
 
       post_webhook(config->alert_webhook, payload);
     }

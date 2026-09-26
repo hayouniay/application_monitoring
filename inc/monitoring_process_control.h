@@ -32,8 +32,7 @@ int process_send_signal(pid_t pid, int signal_number, char *message,
  * human-readable reason into `message` (may be NULL to discard it).
  * Returns 0 on success, -1 on failure.
  */
-int process_renice(pid_t pid, int priority, char *message,
-                   size_t message_size);
+int process_renice(pid_t pid, int priority, char *message, size_t message_size);
 
 #ifdef __cplusplus
 }
