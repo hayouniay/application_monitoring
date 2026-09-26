@@ -38,6 +38,7 @@ set(CORE_SOURCES
     src/monitoring_capture.c
     src/monitoring_log.c
     src/monitoring_alert.c
+    src/monitoring_targets.c
 )
 
 configure_file(

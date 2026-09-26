@@ -36,10 +36,15 @@ Mirrors the CLI's filter/sort/display flags as editable fields: refresh interval
 
 Covers all four remote protocols from one window (non-modal — you can keep monitoring locally while it's open):
 
-- **Protocol** dropdown switches between a monitor-fields page (SSH/Telnet: user, password, SSH key browse, remote binary name) and a deploy-fields page (FTP/TFTP: user/password for FTP, local file browse, remote filename), and updates the default port automatically.
+- **Saved target** dropdown at the top lists connection profiles saved to `~/.config/neo-monitoring/targets.json` — the same file the CLI's `--target`/`--save-target`/`--list-targets`/`--delete-target` flags use, so a target saved from one is usable from the other. Picking one fills in every field below (protocol, host, port, and the login or deploy fields as appropriate) in one click, instead of starting from blank fields every time.
+- **Save...** prompts for a name (pre-filled with the currently-selected target's name, so re-saving over it is one click) and stores everything currently in the form under that name, asking for confirmation before overwriting an existing one.
+- **Delete** removes the currently-selected saved target (with a confirmation prompt) and refreshes the dropdown back to "(none)".
+- **Protocol** dropdown switches between a monitor-fields page (SSH/Telnet: user, password, SSH key browse, remote binary name) and a deploy-fields page (FTP/TFTP: user/password for FTP, local file browse, remote filename), and updates the default port automatically. Loading a saved target selects the matching protocol first.
 - **Connect && Fetch** (SSH/Telnet) runs on a background thread; on success, it **replaces the main table's contents** with the card's process list and pauses local polling. A **Back to Local** control appears in the main window's status bar to return.
 - **Deploy** (FTP/TFTP) uploads the selected file and logs the result.
 - A log pane at the bottom timestamps every action and result.
+
+Saved targets are stored in plain text (a Telnet/FTP password included, if you saved one) with the file restricted to your own user (`0600`) — SSH targets never save a password, since SSH here is always key-based.
 
 See [REMOTE_TESTING.md](REMOTE_TESTING.md) for setting up local test servers to try this without real hardware.
 

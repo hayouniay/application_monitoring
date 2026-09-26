@@ -6,6 +6,7 @@
 
 extern "C" {
 #include "monitoring_remote.h"
+#include "monitoring_targets.h"
 }
 
 class QComboBox;
@@ -49,6 +50,9 @@ private slots:
   void browseIdentityFile();
   void browseLocalFile();
   void runAction();
+  void savedTargetSelected(int index);
+  void saveCurrentAsTarget();
+  void deleteSelectedTarget();
 
 private:
   void setupUi();
@@ -71,11 +75,23 @@ private:
                                const NeoSystemInfo &systemInfo,
                                const QString &sourceLabel);
 
+  /* Saved targets (~/.config/neo-monitoring/targets.json, shared with
+   * the CLI's --target/--save-target/--list-targets/--delete-target). */
+  void reloadSavedTargetsCombo(const QString &selectName = QString());
+  void applyTarget(const NeoTarget &target);
+  NeoTarget targetFromCurrentFields(const QString &name) const;
+
   /* Common */
   QComboBox *m_protocolCombo;
   QLineEdit *m_hostEdit;
   QSpinBox *m_portSpin;
   QStackedWidget *m_stack;
+
+  /* Saved targets row */
+  QComboBox *m_savedTargetCombo;
+  QPushButton *m_saveTargetButton;
+  QPushButton *m_deleteTargetButton;
+  bool m_populatingSavedTargetCombo;
 
   /* SSH / Telnet monitor page */
   QWidget *m_loginPage;
