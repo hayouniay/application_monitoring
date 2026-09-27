@@ -296,6 +296,35 @@ int capture_write_csv(const NeoCaptureSeries *series, const char *path) {
 }
 
 /* ------------------------------------------------------------------------- */
+/* System load average                                                      */
+/* ------------------------------------------------------------------------- */
+
+static int read_load_average(double *load1) {
+  FILE *fp;
+  double one = 0.0;
+
+  fp = fopen("/proc/loadavg", "r");
+
+  if (fp == NULL) {
+    return -1;
+  }
+
+  const int scanned = fscanf(fp, "%lf", &one);
+
+  fclose(fp);
+
+  if (scanned != 1) {
+    return -1;
+  }
+
+  if (load1 != NULL) {
+    *load1 = one;
+  }
+
+  return 0;
+}
+
+/* ------------------------------------------------------------------------- */
 /* Single-sample reader (for live/rolling displays)                         */
 /* ------------------------------------------------------------------------- */
 
@@ -318,6 +347,15 @@ void capture_read_system(double *cpu_percent, double *mem_percent,
   if (swap_percent != NULL) {
     *swap_percent = swap;
   }
+}
+
+/*
+ * Reads the 1-minute load average from /proc/loadavg. Returns 0 on
+ * success, -1 on failure (e.g. non-Linux, or unreadable); *load1 is
+ * left untouched on failure so callers can keep a previous value.
+ */
+int capture_read_load_average(double *load1) {
+  return read_load_average(load1);
 }
 
 /* ------------------------------------------------------------------------- */

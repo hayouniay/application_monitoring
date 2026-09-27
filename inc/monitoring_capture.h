@@ -87,4 +87,11 @@ int capture_write_html_report(const NeoCaptureSeries *series, const char *path);
 void capture_read_system(double *cpu_percent, double *mem_percent,
                          double *swap_percent);
 
+/*
+ * Reads the 1-minute system load average from /proc/loadavg into
+ * *load1. Returns 0 on success, -1 if unavailable (e.g. non-Linux),
+ * in which case *load1 is left untouched.
+ */
+int capture_read_load_average(double *load1);
+
 #endif /* MONITORING_CAPTURE_H */

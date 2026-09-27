@@ -139,6 +139,24 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
 
             capture_read_system(&cpuPercent, &memPercent, &swapPercent);
 
+            m_cpuLabel->setText(
+                QStringLiteral("CPU: %1%").arg(cpuPercent, 0, 'f', 1));
+
+            m_memoryLabel->setText(
+                QStringLiteral("Memory: %1%").arg(memPercent, 0, 'f', 1));
+
+            m_swapLabel->setText(
+                QStringLiteral("Swap: %1%").arg(swapPercent, 0, 'f', 1));
+
+            double load1 = 0.0;
+
+            if (capture_read_load_average(&load1) == 0) {
+              m_loadLabel->setText(
+                  QStringLiteral("Load: %1").arg(load1, 0, 'f', 2));
+            } else {
+              m_loadLabel->setText(QStringLiteral("Load: n/a"));
+            }
+
             updateTrayTooltip(cpuPercent, memPercent);
 
             const int fired = alert_evaluate(&m_alertConfig, &m_alertState,
