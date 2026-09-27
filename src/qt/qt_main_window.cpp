@@ -59,6 +59,40 @@ extern "C" {
 #include <signal.h>
 }
 
+namespace {
+
+/* "Nd HH:MM:SS" (or just "HH:MM:SS" under a day), matching the style
+ * used for per-process elapsed time in the process table. */
+QString formatUptime(double seconds) {
+  if (seconds < 0.0) {
+    seconds = 0.0;
+  }
+
+  unsigned long total = static_cast<unsigned long>(seconds);
+
+  const unsigned long days = total / 86400UL;
+  total %= 86400UL;
+
+  const unsigned long hours = total / 3600UL;
+  total %= 3600UL;
+
+  const unsigned long minutes = total / 60UL;
+  const unsigned long secs = total % 60UL;
+
+  const QString hms = QStringLiteral("%1:%2:%3")
+                          .arg(hours, 2, 10, QLatin1Char('0'))
+                          .arg(minutes, 2, 10, QLatin1Char('0'))
+                          .arg(secs, 2, 10, QLatin1Char('0'));
+
+  if (days > 0) {
+    return QStringLiteral("%1d %2").arg(days).arg(hms);
+  }
+
+  return hms;
+}
+
+} // namespace
+
 NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
     : QMainWindow(parent), m_processModel(new NeoQtProcessModel(this)),
       m_monitorController(new NeoQtMonitorController(this)),
@@ -126,88 +160,97 @@ NeoQtMainWindow::NeoQtMainWindow(QWidget *parent)
           &QItemSelectionModel::selectionChanged, this,
           &NeoQtMainWindow::processSelectionChanged);
 
-  connect(m_monitorController, &NeoQtMonitorController::processesUpdated, this,
-          [this]() {
-            m_processModel->setProcesses(m_monitorController->processes());
+  connect(
+      m_monitorController, &NeoQtMonitorController::processesUpdated, this,
+      [this]() {
+        m_processModel->setProcesses(m_monitorController->processes());
 
-            updateStats();
-            updateDetails();
+        updateStats();
+        updateDetails();
 
-            double cpuPercent = 0.0;
-            double memPercent = 0.0;
-            double swapPercent = 0.0;
+        double cpuPercent = 0.0;
+        double memPercent = 0.0;
+        double swapPercent = 0.0;
 
-            capture_read_system(&cpuPercent, &memPercent, &swapPercent);
+        capture_read_system(&cpuPercent, &memPercent, &swapPercent);
 
-            m_cpuLabel->setText(
-                QStringLiteral("CPU: %1%").arg(cpuPercent, 0, 'f', 1));
+        m_cpuLabel->setText(
+            QStringLiteral("CPU: %1%").arg(cpuPercent, 0, 'f', 1));
 
-            m_memoryLabel->setText(
-                QStringLiteral("Memory: %1%").arg(memPercent, 0, 'f', 1));
+        m_memoryLabel->setText(
+            QStringLiteral("Memory: %1%").arg(memPercent, 0, 'f', 1));
 
-            m_swapLabel->setText(
-                QStringLiteral("Swap: %1%").arg(swapPercent, 0, 'f', 1));
+        m_swapLabel->setText(
+            QStringLiteral("Swap: %1%").arg(swapPercent, 0, 'f', 1));
 
-            double load1 = 0.0;
+        double load1 = 0.0;
 
-            if (capture_read_load_average(&load1) == 0) {
-              m_loadLabel->setText(
-                  QStringLiteral("Load: %1").arg(load1, 0, 'f', 2));
-            } else {
-              m_loadLabel->setText(QStringLiteral("Load: n/a"));
+        if (capture_read_load_average(&load1) == 0) {
+          m_loadLabel->setText(
+              QStringLiteral("Load: %1").arg(load1, 0, 'f', 2));
+        } else {
+          m_loadLabel->setText(QStringLiteral("Load: n/a"));
+        }
+
+        double uptimeSeconds = 0.0;
+
+        if (capture_read_uptime(&uptimeSeconds) == 0) {
+          m_uptimeLabel->setText(
+              QStringLiteral("Uptime: %1").arg(formatUptime(uptimeSeconds)));
+        } else {
+          m_uptimeLabel->setText(QStringLiteral("Uptime: n/a"));
+        }
+
+        updateTrayTooltip(cpuPercent, memPercent);
+
+        const int fired = alert_evaluate(&m_alertConfig, &m_alertState,
+                                         cpuPercent, memPercent);
+
+        if (fired != 0) {
+          QString message;
+
+          if (fired & NEO_ALERT_CPU) {
+            message = QStringLiteral("CPU usage %1% has stayed above %2%")
+                          .arg(cpuPercent, 0, 'f', 1)
+                          .arg(m_alertConfig.alert_cpu_percent, 0, 'f', 1);
+          }
+
+          if (fired & NEO_ALERT_MEM) {
+            if (!message.isEmpty()) {
+              message += QStringLiteral("\n");
             }
 
-            updateTrayTooltip(cpuPercent, memPercent);
+            message += QStringLiteral("Memory usage %1% has stayed above %2%")
+                           .arg(memPercent, 0, 'f', 1)
+                           .arg(m_alertConfig.alert_mem_percent, 0, 'f', 1);
+          }
 
-            const int fired = alert_evaluate(&m_alertConfig, &m_alertState,
-                                             cpuPercent, memPercent);
+          handleAlertTriggered(fired, cpuPercent, memPercent, message);
+        }
 
-            if (fired != 0) {
-              QString message;
+        if (m_graphsWindow != nullptr || m_captureWindow != nullptr) {
 
-              if (fired & NEO_ALERT_CPU) {
-                message = QStringLiteral("CPU usage %1% has stayed above %2%")
-                              .arg(cpuPercent, 0, 'f', 1)
-                              .arg(m_alertConfig.alert_cpu_percent, 0, 'f', 1);
-              }
+          double ioRead = 0.0;
+          double ioWrite = 0.0;
 
-              if (fired & NEO_ALERT_MEM) {
-                if (!message.isEmpty()) {
-                  message += QStringLiteral("\n");
-                }
+          const NeoProcessList &list = m_monitorController->processes();
 
-                message +=
-                    QStringLiteral("Memory usage %1% has stayed above %2%")
-                        .arg(memPercent, 0, 'f', 1)
-                        .arg(m_alertConfig.alert_mem_percent, 0, 'f', 1);
-              }
+          for (size_t i = 0; i < list.count; ++i) {
+            ioRead += list.items[i].io_read_mb_s;
+            ioWrite += list.items[i].io_write_mb_s;
+          }
 
-              handleAlertTriggered(fired, cpuPercent, memPercent, message);
-            }
+          if (m_graphsWindow != nullptr) {
+            m_graphsWindow->addSample(cpuPercent, memPercent, swapPercent,
+                                      ioRead, ioWrite);
+          }
 
-            if (m_graphsWindow != nullptr || m_captureWindow != nullptr) {
-
-              double ioRead = 0.0;
-              double ioWrite = 0.0;
-
-              const NeoProcessList &list = m_monitorController->processes();
-
-              for (size_t i = 0; i < list.count; ++i) {
-                ioRead += list.items[i].io_read_mb_s;
-                ioWrite += list.items[i].io_write_mb_s;
-              }
-
-              if (m_graphsWindow != nullptr) {
-                m_graphsWindow->addSample(cpuPercent, memPercent, swapPercent,
-                                          ioRead, ioWrite);
-              }
-
-              if (m_captureWindow != nullptr) {
-                m_captureWindow->feedSample(cpuPercent, memPercent, swapPercent,
-                                            ioRead, ioWrite, list.count);
-              }
-            }
-          });
+          if (m_captureWindow != nullptr) {
+            m_captureWindow->feedSample(cpuPercent, memPercent, swapPercent,
+                                        ioRead, ioWrite, list.count);
+          }
+        }
+      });
 
   connect(m_monitorController, &NeoQtMonitorController::systemInfoUpdated, this,
           &NeoQtMainWindow::updateStats);
@@ -258,6 +301,7 @@ void NeoQtMainWindow::setupUi() {
   statsLayout->addWidget(m_swapLabel);
   statsLayout->addWidget(m_processCountLabel);
   statsLayout->addWidget(m_loadLabel);
+  statsLayout->addWidget(m_uptimeLabel);
   statsLayout->addStretch();
 
   mainLayout->addWidget(statsGroup);
@@ -391,6 +435,8 @@ void NeoQtMainWindow::setupStats() {
   m_processCountLabel = new QLabel(QStringLiteral("Processes: 0"), this);
 
   m_loadLabel = new QLabel(QStringLiteral("Load: --"), this);
+
+  m_uptimeLabel = new QLabel(QStringLiteral("Uptime: --"), this);
 }
 
 QGroupBox *NeoQtMainWindow::setupFilters() {

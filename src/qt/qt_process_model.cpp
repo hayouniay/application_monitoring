@@ -1,6 +1,55 @@
 #include "qt/qt_process_model.h"
 
+#include <QDateTime>
 #include <QString>
+
+#include <ctime>
+
+namespace {
+
+/* Mirrors format_start_time() in monitoring_output.c (kept separate
+ * since that one is a static CLI-only helper) - "-" for a process
+ * whose start time couldn't be determined. */
+QString formatStartTime(time_t startTime) {
+  if (startTime <= 0) {
+    return QStringLiteral("-");
+  }
+
+  return QDateTime::fromSecsSinceEpoch(static_cast<qint64>(startTime))
+      .toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+}
+
+/* Mirrors format_elapsed() in monitoring_output.c: "HH:MM:SS", or
+ * "Nd HH:MM:SS" once a process has been running for over a day. */
+QString formatElapsed(double seconds) {
+  if (seconds < 0.0) {
+    seconds = 0.0;
+  }
+
+  unsigned long total = static_cast<unsigned long>(seconds);
+
+  const unsigned long days = total / 86400UL;
+  total %= 86400UL;
+
+  const unsigned long hours = total / 3600UL;
+  total %= 3600UL;
+
+  const unsigned long minutes = total / 60UL;
+  const unsigned long secs = total % 60UL;
+
+  const QString hms = QStringLiteral("%1:%2:%3")
+                          .arg(hours, 2, 10, QLatin1Char('0'))
+                          .arg(minutes, 2, 10, QLatin1Char('0'))
+                          .arg(secs, 2, 10, QLatin1Char('0'));
+
+  if (days > 0) {
+    return QStringLiteral("%1d %2").arg(days).arg(hms);
+  }
+
+  return hms;
+}
+
+} // namespace
 
 NeoQtProcessModel::NeoQtProcessModel(QObject *parent)
     : QAbstractTableModel(parent) {}
@@ -41,6 +90,7 @@ QVariant NeoQtProcessModel::data(const QModelIndex &index, int role) const {
     case ColumnRead:
     case ColumnWrite:
     case ColumnThreads:
+    case ColumnElapsed:
       return QVariant::fromValue(
           Qt::Alignment(Qt::AlignRight | Qt::AlignVCenter));
 
@@ -85,6 +135,12 @@ QVariant NeoQtProcessModel::data(const QModelIndex &index, int role) const {
     case ColumnThreads:
       return static_cast<qulonglong>(process.threads);
 
+    case ColumnStartTime:
+      return formatStartTime(process.start_time);
+
+    case ColumnElapsed:
+      return formatElapsed(process.elapsed_seconds);
+
     case ColumnCommand:
       return QString::fromLocal8Bit(process.comm);
 
@@ -121,6 +177,12 @@ QVariant NeoQtProcessModel::data(const QModelIndex &index, int role) const {
 
     case ColumnThreads:
       return static_cast<qulonglong>(process.threads);
+
+    case ColumnStartTime:
+      return static_cast<qlonglong>(process.start_time);
+
+    case ColumnElapsed:
+      return process.elapsed_seconds;
 
     default:
       return {};
@@ -171,6 +233,12 @@ QVariant NeoQtProcessModel::headerData(int section, Qt::Orientation orientation,
 
   case ColumnThreads:
     return "THREADS";
+
+  case ColumnStartTime:
+    return "START";
+
+  case ColumnElapsed:
+    return "ELAPSED";
 
   case ColumnCommand:
     return "COMMAND";

@@ -94,4 +94,11 @@ void capture_read_system(double *cpu_percent, double *mem_percent,
  */
 int capture_read_load_average(double *load1);
 
+/*
+ * Reads system uptime (seconds since boot) from /proc/uptime into
+ * *uptime_seconds. Returns 0 on success, -1 if unavailable (e.g.
+ * non-Linux), in which case *uptime_seconds is left untouched.
+ */
+int capture_read_uptime(double *uptime_seconds);
+
 #endif /* MONITORING_CAPTURE_H */

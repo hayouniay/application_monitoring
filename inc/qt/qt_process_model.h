@@ -24,6 +24,8 @@ public:
     ColumnRead,
     ColumnWrite,
     ColumnThreads,
+    ColumnStartTime,
+    ColumnElapsed,
     ColumnCommand,
     ColumnCount
   };

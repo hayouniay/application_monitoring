@@ -91,6 +91,7 @@ private:
   QLabel *m_swapLabel;
   QLabel *m_processCountLabel;
   QLabel *m_loadLabel;
+  QLabel *m_uptimeLabel;
 
   QLineEdit *m_filterEdit;
   QComboBox *m_sortCombo;

@@ -359,6 +359,41 @@ int capture_read_load_average(double *load1) {
 }
 
 /* ------------------------------------------------------------------------- */
+/* System uptime                                                            */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * Reads system uptime (seconds since boot) from /proc/uptime into
+ * *uptime_seconds. Returns 0 on success, -1 on failure (e.g.
+ * non-Linux, or unreadable); *uptime_seconds is left untouched on
+ * failure.
+ */
+int capture_read_uptime(double *uptime_seconds) {
+  FILE *fp;
+  double uptime = 0.0;
+
+  fp = fopen("/proc/uptime", "r");
+
+  if (fp == NULL) {
+    return -1;
+  }
+
+  const int scanned = fscanf(fp, "%lf", &uptime);
+
+  fclose(fp);
+
+  if (scanned != 1) {
+    return -1;
+  }
+
+  if (uptime_seconds != NULL) {
+    *uptime_seconds = uptime;
+  }
+
+  return 0;
+}
+
+/* ------------------------------------------------------------------------- */
 /* HTML report export                                                        */
 /* ------------------------------------------------------------------------- */
 
